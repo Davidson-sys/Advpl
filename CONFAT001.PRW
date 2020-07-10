@@ -15,7 +15,7 @@
 */  
 
 User Function CONFAT001()   
-
+	Local cMensagem:="Aprendendo GITHUB"
 	Local cAlias := Alias()
 	Local lGet	 := .T.
 	Local nOpc	 := 0
