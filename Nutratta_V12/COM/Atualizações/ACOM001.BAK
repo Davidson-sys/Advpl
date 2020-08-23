@@ -1,0 +1,134 @@
+#Include "Protheus.ch"
+
+/*
+¦+-----------------------------------------------------------------------------+¦
+¦¦Programa  ¦ ACOM001          ¦ Autor ¦ Davidson Carvalho  ¦ Data ¦ 19/08/2016¦¦
+¦+----------+------------------------------------------------------------------¦¦
+¦¦Descrição ¦Forma de Pagamento no Pedido de Compras e Doc. Entrada	    	   ¦¦
+¦¦          ¦                                                                  ¦¦
+¦+----------+------------------------------------------------------------------¦¦
+¦¦			ATUALIZAÇÕES SOFRIDAS DESDE A CONSTRUÇÃO INICIAL     			   ¦¦
+¦+-----------------------------------------------------------------------------¦¦
+¦¦ Analista 	 ¦ Data    ¦  Motivo da Alteração				       		   ¦¦
+¦+---------------+---------+---------------------------------------------------¦¦
+¦¦Lucas N.	   	 |06/10/16   ¦	       ¦ 				       				   ¦¦
+¦+---------------+---------+---------------------------------------------------¦¦
+¦¦	 		     ¦	       ¦											       ¦¦
+¦+---------------+---------+---------------------------------------------------+¦
+*/
+
+User Function ACOM001()
+Local oDlgSXB   		:= Nil
+Local oCheck			:= Nil
+
+Local nOpcClick			:= 0
+Local lSeleciona		:= .T.
+
+Local cQuery 			:= ""
+Local bQuery    		:= {|| IIf(Select("ALIAST") > 0, ALIAST->(dbCloseArea()), Nil), dbUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"ALIAST",.F.,.T.), dbSelectArea("ALIAST"), ALIAST->(dbGoTop()) }
+
+Local cRotina			:= Substr(ProcName(1),3,Len(ProcName(1)))
+Local cChaveSE2	   		:= ""
+Local cChaveSC7			:= ""
+	
+Private oListBox		:= Nil
+Private aLista			:= {}
+
+	cChaveSE2 	:= SE2->(E2_FILIAL + E2_FORNECE + E2_LOJA + E2_PREFIXO + E2_NUM)
+	cChaveSC7 	:= SC7->(C7_FILIAL + C7_FORNECE + C7_LOJA + C7_NUM)
+	
+	If cRotina == "MT103FIM"
+		DbSelectArea("SE2")
+		SE2->(DbSetOrder(6)) // E2_FILIAL + E2_FORNECE + E2_LOJA + E2_PREFIXO + E2_NUM
+		SE2->(DbSeek(cChaveSE2))
+	Else
+		DbSelectArea("SC7")
+		SC7->(DbSetOrder(3)) // C7_FILIAL + C7_FORNECE + C7_LOJA + C7_NUM
+		SC7->(DbSeek(cChaveSC7))
+	Endif 
+	
+	//¦+-------------------------------------------------------------+¦
+	//¦¦ Tabela 'ZF' Forma de Pagamento     				         ¦¦
+	//¦+-------------------------------------------------------------+¦
+	cQuery := " SELECT X5_CHAVE, X5_DESCRI FROM "+ RetSqlName("SX5")+ " (NOLOCK) WHERE X5_TABELA = 'ZF' AND D_E_L_E_T_ = ''  "
+	Eval(bQuery)
+	
+	While ALIAST->(!Eof())
+		If cRotina == "MT103FIM" .And.  Alltrim(SC7->C7_N_FORPG) == AllTrim(ALIAST->X5_CHAVE)
+			AAdd(aLista,{.T.,AllTrim(ALIAST->X5_CHAVE),Alltrim(ALIAST->X5_DESCRI),''})
+		Else
+			AAdd(aLista,{.F.,AllTrim(ALIAST->X5_CHAVE),Alltrim(ALIAST->X5_DESCRI),''})
+		Endif
+		ALIAST->(dbSkip())
+	EndDo
+			
+	//¦+-------------------------------------------------------------+¦
+	//¦¦ Cria a Tela de Consulta               				         ¦¦
+	//¦+-------------------------------------------------------------+¦
+	//PARAMETROS-> TFont():New(   Nome, 9, Tamanho , .T.,  Negrito, 5, .T., 5, .T., Sublinhado,Italico)
+	 oFont:= TFont():New("Arial", 9,    16, .T.,   .F., 5, .T., 5, .T.,  .F., .F.)
+	
+	While lSeleciona // Verifica se ao menos um item foi selecionado!
+		               //nSuperior,nEsquerda,nInferior,nDireita
+		oDlgSXB		:= TDialog():New(000,000,350,600,OemToAnsi("Selecione a Forma de Pagamento"),,,,,,,,oMainWnd,.T.)
+		oListBox	:= TWBrowse():New(001,003,300,150,,{" ","Código","Descrição"},,oDlgSXB,,,,,,,/*oFont*/,,,,,.F.,,.T.,,.F.,,,)
+		oListBox:SetArray(aLista)
+		oListBox:bLine := {||{	IIf(aLista[oListBox:nAt][1],LoadBitmap( GetResources(), "CHECKED" ),LoadBitmap( GetResources(), "UNCHECKED" )),aLista[oListBox:nAt][2],aLista[oListBox:nAt][3] }}
+		
+		oListBox:bLDblClick := {||	aLista[oListBox:nAt][1] := !aLista[oListBox:nAt][1], fMark()  , oListBox:Refresh()  }
+		
+		TButton():New(160,003,OemToAnsi("&Ok"),oDlgSXB,{|| nOpcClick := 1 , oDlgSXB:End()},040,010,,/*oFont*/,.F.,.T.,.F.,,.F.,{|| },,.F. )
+		oDlgSXB:Activate(,,,.T.)
+		
+		If nOpcClick == 1
+		
+			For i := 1 To Len(aLista)
+				If aLista[i][1]
+					lSeleciona := .F.
+					Do Case
+						Case cRotina == "MT120FIM"
+							While SC7->(!Eof()) .And. SC7->(C7_FILIAL + C7_FORNECE + C7_LOJA + C7_NUM) == cChaveSC7
+								SC7->(Reclock("SC7",.F.))
+									SC7->C7_N_FORPG := aLista[i][2]
+								SC7->(MsUnlock())
+							SC7->(DbSkip())
+							EndDo
+								
+						Case cRotina == "MT103FIM"
+							While SE2->(!Eof()) .And. SE2->(E2_FILIAL + E2_FORNECE + E2_LOJA + E2_PREFIXO + E2_NUM) == cChaveSE2
+								SE2->(Reclock("SE2",.F.))
+									SE2->E2_N_FORPG := aLista[i][2]
+									SE2->E2_DESCPGT := aLista[i][3]
+								SE2->(MsUnlock())
+							SE2->(DbSkip())
+							EndDo
+							While SC7->(!Eof()) .And. SC7->(C7_FILIAL + C7_FORNECE + C7_LOJA + C7_NUM) == cChaveSC7
+								SC7->(Reclock("SC7",.F.))
+									SC7->C7_N_FORPG := aLista[i][2]
+								SC7->(MsUnlock())
+							SC7->(DbSkip())
+							EndDo
+					EndCase
+				Endif
+			Next i
+		Endif
+		
+		If lSeleciona
+			MsgAlert("Favor Selecionar um Item")
+		Endif
+	EndDo
+		
+Return()
+
+//¦+-------------------------------------------------------------+¦
+//¦¦Força ao Usuário Marcar somente uma opção!			         ¦¦
+//¦+-------------------------------------------------------------+¦
+Static Function fMark()
+
+	For i := 1 To LeN(aLista)
+		If aLista[i][1] .And. oListBox:nAt <> i
+			aLista[i][1] := !aLista[i][1]
+		Endif
+	Next
+	
+Return()

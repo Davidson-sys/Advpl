@@ -1,0 +1,22 @@
+#INCLUDE "PROTHEUS.CH"
+#INCLUDE "RWMAKE.CH"
+#INCLUDE "TOPCONN.CH"
+//--------------------------------------------------------------------------
+/* {Protheus.doc} M410RLIB
+É executado após a gravação das alterações, para refazer as 
+liberações de estoque considerando os registros do arquivo 
+SDC (composição de empenho) da liberação anterior.
+
+Empresa - Copyright -Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 15/04/2019
+@version P11 R8
+*/
+//--------------------------------------------------------------------------
+User Function M410RLIB()
+
+
+
+
+Return 
+

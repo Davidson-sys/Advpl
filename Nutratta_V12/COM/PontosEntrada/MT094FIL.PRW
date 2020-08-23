@@ -1,0 +1,26 @@
+#INCLUDE "PROTHEUS.CH"
+#INCLUDE "RWMAKE.CH"
+#INCLUDE "TOPCONN.CH"
+//--------------------------------------------------------------------------
+/* {Protheus.doc} MT094FIL
+Filtra registros da mBrowse
+Localização.: Function MATA094 - Programa de liberação de pedido de compras.   
+Finalidade...: Utilizado para filtrar os registros da mBrowse.
+
+@author Davidson Clayton
+@since 20/06/2018
+@version P11 R8
+
+*/
+//--------------------------------------------------------------------------
+User Function MT094FIL()
+
+Local cRet := ""
+
+cRet :=  "  CR_TIPO  == 'PC' .And. CR_TIPOLIM  == 'D'  "
+
+Return (cRet) 
+
+
+
+

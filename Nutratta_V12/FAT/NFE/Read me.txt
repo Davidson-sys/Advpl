@@ -1,0 +1,13 @@
+
+
+
+	//Liberdade Servicos de Informatica
+	//03/03/15 Wander Souza Silva
+	//Chamada da Impressão do Boleto
+		Private lImpBol:=	.F.
+		If MsgYesNo("Deseja Imprimir os boletos em sequencia a cada DANFE?")
+			U_RFIN001(MV_PAR01,MV_PAR02,MV_PAR03)
+		EndIf
+	//Fim Liberdade
+	
+Este expressão devera ser incluso no DANFEII.PRW abaixo da linha 84.

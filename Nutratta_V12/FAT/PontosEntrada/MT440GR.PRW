@@ -1,0 +1,248 @@
+#INCLUDE 'PROTHEUS.CH'
+#INCLUDE 'TOPCONN.CH'
+
+#include 'protheus.ch'
+#include 'parmtype.ch'
+
+/*/{Protheus.doc} MT440GR
+Ponto de Entrada para validar a liberação de pedido de vendas.
+
+@author Davidson Nutratta.
+@since  03/04/2019
+@version 1.0 
+
+@param  N/H
+
+@return Logico (.T. ou .F.)
+/*/
+
+User Function MT440GR()
+
+Local aArea440 	:= GetArea()
+Local oDlgSXB   := Nil
+Local oDlgMotv	:= Nil
+Local oCheck	:= Nil
+Local nOpcClick	:= 0
+Local nOpdClick	:= 0
+Local lSeleciona:= .T. 
+Local lSelecMot	:= .T. 
+Local lRet 		:= .T.
+Local cMensagem := "" 
+Local cObs		:= ""
+Local cOBserv	:= "" 
+Local _cCodSuper:= ""
+Local _cNomSuper:= ""  
+Local _CodMotivo:= ""
+Local _cDescMotv:= ""					
+Local cTitulo	:= "Motivo Desbloqueio"
+Local nOPc		:= PARAMIXB[1]  //1=Confirma 0=Cancela
+Local dData		:= dDataBase
+Local cHora		:= Time()
+Local cFilial	:= SC5->C5_FILIAL
+Local cNumPv	:= SC5->C5_NUM
+Local cClient	:= SC5->C5_CLIENTE
+Local cLojaCli	:= SC5->C5_LOJACLI
+Local cNota		:= SC5->C5_NOTA
+Local lBloqTMS	:= SC5->C5_LIBTMS
+Local lOk
+Local oDlgMotivo
+
+private cMemo
+Private oListBox := Nil 
+Private oListMotv:= Nil
+Private aLista	 := {}
+Private aListMotv:= {} 
+
+
+If nOPc == 1 
+	If !lBloqTMS 
+		
+		//-----------------------------------------------------------------------------------
+		// Selecionar o motivo do desbloqueio.
+		//-----------------------------------------------------------------------------------
+		dbSelectArea("SX5")
+		dbGotop()
+		While !Eof()
+			
+			If	SX5->X5_TABELA = 'TM'
+				
+				Aadd(aListMotv,{.F.,SX5->X5_CHAVE,SX5->X5_DESCRI})
+			EndIf
+			dbSkip()
+		End
+		
+		
+		While lSelecMot // Verifica se ao menos um item foi selecionado!
+			//nSuperior,nEsquerda,nInferior,nDireita
+			oDlgMotv	:= TDialog():New(000,000,350,600,OemToAnsi("Selecione o motivo do desbloqueio. "),,,,,,,,oMainWnd,.T.)
+			oListMotv	:= TWBrowse():New(001,003,300,150,,{" ","Código","Nome"},,oDlgMotv,,,,,,,/*oFont*/,,,,,.F.,,.T.,,.F.,,,)
+			oListMotv:SetArray(aListMotv)
+			oListMotv:bLine := {||{	IIf(aListMotv[oListMotv:nAt][1],LoadBitmap( GetResources(), "CHECKED" ),LoadBitmap( GetResources(), "UNCHECKED" )),aListMotv[oListMotv:nAt][2],aListMotv[oListMotv:nAt][3]}}
+			
+			oListMotv:bLDblClick := {||	aListMotv[oListMotv:nAt][1] := !aListMotv[oListMotv:nAt][1], fMarkMotv() , oListMotv:Refresh()  }
+			
+			TButton():New(160,003,OemToAnsi("&Ok"),oDlgMotv,{|| nOpcClick := 1 , oDlgMotv:End()},040,010,,/*oFont*/,.F.,.T.,.F.,,.F.,{|| },,.F. )
+			oDlgMotv:Activate(,,,.T.)
+			
+			If nOpcClick == 1
+				
+				For i := 1 To Len(aListMotv)
+					If aListMotv[i][1]
+						lSelecMot := .F.
+					Endif
+					
+					If aListMotv[i][1]
+						_CodMotivo:= aListMotv[i][2]
+						_cDescMotv:= aListMotv[i][3]
+					EndIf
+				Next i
+			Endif
+			
+			If lSelecMot
+				MsgAlert("Favor Selecionar um Motivo.")
+			Endif
+		EndDo
+		
+		//-----------------------------------------------------------------------------------
+		// Cria a Tela de Consulta supervisores.
+		//-----------------------------------------------------------------------------------
+		//PARAMETROS-> TFont():New(   Nome, 9, Tamanho , .T.,  Negrito, 5, .T., 5, .T., Sublinhado,Italico)
+		oFont:= TFont():New("Arial", 9,    16, .T.,   .F., 5, .T., 5, .T.,  .F., .F.)
+		
+		dbSelectArea("SA3")
+		dbGotop()
+		While !Eof()
+			
+			If	SA3->A3_COD = '000071' .Or. SA3->A3_COD = '000128' .Or. SA3->A3_COD = '000175' .OR.SA3->A3_COD='000053'
+				
+				Aadd(aLista,{.F.,A3_COD,A3_NOME})
+			EndIf
+			dbSkip()
+		End
+		
+		
+		While lSeleciona // Verifica se ao menos um item foi selecionado!
+			//nSuperior,nEsquerda,nInferior,nDireita
+			oDlgSXB		:= TDialog():New(000,000,350,600,OemToAnsi("Selecione o supervisor "),,,,,,,,oMainWnd,.T.)
+			oListBox	:= TWBrowse():New(001,003,300,150,,{" ","Código","Nome"},,oDlgSXB,,,,,,,/*oFont*/,,,,,.F.,,.T.,,.F.,,,)
+			oListBox:SetArray(aLista)
+			oListBox:bLine := {||{	IIf(aLista[oListBox:nAt][1],LoadBitmap( GetResources(), "CHECKED" ),LoadBitmap( GetResources(), "UNCHECKED" )),aLista[oListBox:nAt][2],aLista[oListBox:nAt][3]}}
+			
+			oListBox:bLDblClick := {||	aLista[oListBox:nAt][1] := !aLista[oListBox:nAt][1], fMark() , oListBox:Refresh()  }
+			
+			TButton():New(160,003,OemToAnsi("&Ok"),oDlgSXB,{|| nOpdClick := 1 , oDlgSXB:End()},040,010,,/*oFont*/,.F.,.T.,.F.,,.F.,{|| },,.F. )
+			oDlgSXB:Activate(,,,.T.)
+			
+			If nOpdClick == 1
+				
+				For i := 1 To Len(aLista)
+					
+					If aLista[i][1]
+						lSeleciona := .F.
+					Endif
+					
+					If aLista[i][1]
+						_cCodSuper:= aLista[i][2]
+						_cNomSuper:= aLista[i][3]
+					Endif
+				Next i
+			Endif
+			
+			If lSeleciona
+				
+				MsgAlert("Favor Selecionar um supervisor.")
+			Endif
+		EndDo
+		
+		
+		//-----------------------------------------------------------------------------------
+		// Informações complementares a respeito da liberação.
+		//-----------------------------------------------------------------------------------
+		DEFINE MSDIALOG oDlgMotivo FROM 000,000 TO 250,400 PIXEL TITLE OemToAnsi(cTitulo)
+		TBitMap():New(000,000,320,390,"ProjetoAP",,.t.,oDlgMotivo,,,,,,,,,.t.)
+		
+		tSay():New(005,005,{||"Motivo:"},oDlgMotivo,,,,,,.T.,CLR_BLACK,CLR_BLACK,200,350)
+		
+		TMultiGet():New(015,005,{|u| if(PCount()>0,cMemo:=u,cMemo)},oDlgMotivo,193,092,,.T.,,,,.T.,OemToAnsi(cTitulo))
+		
+		TButton():New(110,006/*110,005*/,"&Registrar",oDlgMotivo,{|| lOk:= .T., oDlgMotivo:End()},035,015,,,.T.,.T.,,OemToAnsi("Registrar motivo"))
+		//TButton():New(110,043,"&Cancelar",oDlgMotivo, {|| lOk:= .F., oDlgMotivo:End()},035,015,,,.T.,.T.,,OemToAnsi("Cancelar"))
+		
+		Activate MsDialog oDlgMotivo Center
+		
+		If lOk
+			If Len(Alltrim(cMemo)) < 5
+				lOk:= .F.
+			EndIf
+		EndIf
+	
+		//-----------------------------------------------------------------------------------
+		// Realiza a gravação na tabela geral de Status
+		//-----------------------------------------------------------------------------------
+		dbSelectArea("ZB3") //ZB3_DATA+ZB3_HORA+ZB3_ORC+ZB3_PEDIDO+ZB3_NOTA+ZB3_CTE+ZB3_MDFE
+		dbSetOrder(1)
+		If dbSeek(Padr(cFilial,4)+Padr(dData,8)+Padr(cHora,8)+Padr('',6)+Padr(cNumPv,6)+Padr(cNota,9))
+			lAchou:=.F.
+		Else
+			lAchou:=.T.
+		EndIf
+		
+		If RecLock("ZB3",lAchou)
+			
+			Replace ZB3->ZB3_FILIAL	With Padr(cFilial,4)
+			Replace ZB3->ZB3_DATA 	With dData
+			Replace ZB3->ZB3_HORA   With Padr(cHora,8)
+			Replace ZB3->ZB3_ORC   	With Padr('',6)
+			Replace ZB3->ZB3_PEDIDO	With Padr(cNumPv,6)
+			Replace ZB3->ZB3_NOTA 	With Padr(cNota,9)
+			Replace ZB3->ZB3_USER  	With cUserName
+			Replace ZB3->ZB3_DTULT 	With dData
+			Replace ZB3->ZB3_HRULT  With Padr(cHora,8)
+			Replace ZB3->ZB3_STATUS With 'I'
+			Replace ZB3->ZB3_DSTAT	With 'BLOQUEIO VERBA/FRETE'
+			Replace ZB3->ZB3_CMOTI	With _CodMotivo
+			Replace ZB3->ZB3_MOTIV	With _cDescMotv
+			Replace ZB3->ZB3_AUTOR	With _cCodSuper
+			Replace ZB3->ZB3_NOME	With _cNomSuper
+			Replace ZB3->ZB3_CHV	With ''
+			Replace ZB3->ZB3_OBS	With cMemo
+			Replace ZB3->ZB3_CHV	With ''
+			
+			MsUnlock()
+		EndIf
+	Else 
+		MsgAlert("Pedido Já foi liberado pela Logistica.")
+	EndIf
+EndIf
+
+RestArea(aArea440)		
+Return(lOk)
+	
+
+//-----------------------------------------------------------------------------------
+// Força ao Usuário Marcar somente uma opção do Motivo Bloqueio.
+//-----------------------------------------------------------------------------------
+Static Function fMarkMotv()
+
+For i := 1 To LeN(aListMotv)
+	If aListMotv[i][1] .And. oListMotv:nAt <> i
+		aListMotv[i][1] := !aListMotv[i][1]
+	Endif
+Next
+Return
+	
+//-----------------------------------------------------------------------------------
+// Força ao Usuário Marcar somente uma opção Supervisor.
+//-----------------------------------------------------------------------------------
+Static Function fMark()
+
+For i := 1 To LeN(aLista)
+	If aLista[i][1] .And. oListBox:nAt <> i
+		aLista[i][1] := !aLista[i][1]
+	Endif
+Next
+
+Return           
+
+
+

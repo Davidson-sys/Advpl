@@ -1,0 +1,41 @@
+#Include "rwmake.ch"
+#Include 'Protheus.ch'
+#Include 'Parmtype.ch'
+
+/*
+========================================================================================================================
+Rotina----: CADZA8
+Autor-----: Davidson Carvalho
+Data------: 24/01/2019
+========================================================================================================================
+Descrição-: Cadastro de tabela de frete. 
+Uso-------: Logistica Nutratta.
+========================================================================================================================
+*/
+
+//MBROWSE DA TABELA ZA8- Cadastro tabela de frete.
+User Function CADZA8
+
+Private cPerg   	:= ""
+Private cCadastro 	:= "Cadastro Fretes Nutratta"
+Private aRotina 	:= { {"Pesquisar","AxPesqui",0,1} ,;
+             			{"Visualizar","AxVisual",0,2} ,;
+             			{"Incluir","AxInclui",0,3} ,;
+             			{"Alterar","AxAltera",0,4} ,;
+             			{"Excluir","AxDeleta",0,5}}
+
+Private cDelFunc := ".T." // Validacao para a exclusao. Pode-se utilizar ExecBlock
+
+Private cString := "ZA8"
+
+dbSelectArea("ZA8")
+dbSetOrder(1)
+
+cPerg   := ""
+
+dbSelectArea(cString)
+mBrowse(6,1,22,75,cString)
+
+Set Key 123 To // Desativa a tecla F12 do acionamento dos parametros
+
+Return

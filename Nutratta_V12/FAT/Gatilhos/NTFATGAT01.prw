@@ -1,0 +1,83 @@
+#INCLUDE "PROTHEUS.CH"
+#INCLUDE "RWMAKE.CH"
+#INCLUDE "TOPCONN.CH"
+
+//--------------------------------------------------------------------------
+/* {Protheus.doc} NTFATGAT01
+Gatilho para preencher o campo contrato e TES automaticamente.
+após o preenchimento do produto.
+  
+Campo 		  C6_PRODUTO
+Campo.Domino  C6_CONTRAT
+Conteudo	  U_NTFATGAT01()  
+
+O gatilho tem como objetivo preencher os campos 
+TES e contrato a partir do preenchimento do 
+campo produto.                
+
+Empresa - Copyright - Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 13/09/2016
+@version P11 R8   
+
+@return Logico (.T. ou .F.)
+*/
+//--------------------------------------------------------------------------
+User Function NTFATGAT01()
+              
+Local nPosPrd 		:= 	aScan(aHeader,{|x| AllTrim(x[2])=="C6_PRODUTO"})  
+Local nPosCtr 		:= 	aScan(aHeader,{|x| AllTrim(x[2])=="C6_CONTRAT"})
+Local cCodPrd			:= 	GDFieldGet("C6_PRODUTO",n)
+Local cTEs				:=	GDFieldGet("C6_TES",n)
+Local cContrat		:=	GDFieldGet("C6_CONTRAT",n) 
+Local cItemCtr		:= 	GDFieldGet("C6_ITEMCON",n)
+Local cCfOp			:= 	GDFieldGet("C6_CF",n)
+Local cTipo			:=	SC5->C5_TIPO
+Local cNcM				:= "23099090"
+Local _cMens			:="PRODUTO NUTRATTA FOS – UTILIZAR TES ESPECIFICA PARA O PRODUTO."
+Local nxi				:= 0
+Local lRet				:= .T.             
+
+If xFilial("SC5")=="0101" //Espeficifico para matriz.
+
+	//-----------------------------------------------------------------------------------
+	// Gatilho contrato de parceria.
+	//-----------------------------------------------------------------------------------
+	If Empty(cContrat)
+		
+		//--Busca a TES e o numero do contrato.
+		For nxi:=1 To Len(aCols)
+			
+			If cCodPrd == aCols[nxi][nPosPrd] .And. !Empty(aCols[nxi][nPosCtr])   //contrato preenchido e o mesmo produto.
+				
+				cTEs		:=	GDFieldGet("C6_TES",nxi)
+				cContrat	:=	GDFieldGet("C6_CONTRAT",nxi)
+				cItemCtr	:=	GDFieldGet("C6_ITEMCON",nxi)
+				cCfOp		:= 	GDFieldGet("C6_CF",nxi)
+				Exit
+			EndIf
+		Next nxi
+		
+		//--Preenche os campos TES e CONTRATO Item Contrato CFOP.
+		GDFieldPut("C6_TES",cTEs,Len(aCols))
+		GDFieldPut("C6_CONTRAT",cContrat,Len(aCols))
+		GDFieldPut("C6_ITEMCON",cItemCtr,Len(aCols))
+		GDFieldPut("C6_CF",cCfOp,Len(aCols))
+	EndIf
+	
+	//---------------------------------------------------------------------------------------
+	// Gatilho/Mensagem para produto Fos-Solicitado por Graziele em 31/10/2016.Pedidos Normal
+	//---------------------------------------------------------------------------------------
+	dbSelectArea("SB1")
+	dbSetOrder(1)
+	If dbSeek(xFilial("SB1")+cCodPrd)
+			
+		If	cNcM $ SB1->B1_POSIPI
+			
+			Aviso("Atenção",_cMens,{"OK"},2)				
+		EndIf
+	EndIf		
+EndIf
+
+Return(cContrat)
+

@@ -1,0 +1,69 @@
+#include "tbiconn.ch"
+#include "colors.ch"
+
+//-------------------------------------------------------------------------------------------
+/*/{Protheus.doc} NTFTCOND.
+Validação para não permitir informar uma condição de pagamento diferente do risco do cliente.
+
+Especifico Nutratta Nutrição Animal.	
+@author   Davidson
+@since 	   04/10/2016.
+@version 	P11 R5
+@return  	n/t
+@obs.......  
+o	Chamada:C5_CONDPAG.
+Retorno logico .T. ou .F.
+xxx......
+/*/
+//----------------------------------------------------------------------------------------------------------- 
+User Function NTFTCOND()
+
+Local lRet		:=.F.
+Local cRisco	:=""
+Local aAreaSE4:=GetARea("SE4")
+
+//#IIF(ALLTRIM(RETCODUSR())$"000081/000013/000037/000068","@E4_CODIGO <> '' ","@E4_N_CRM = 'S'")
+//--Permiti selecionar todas as condições de pagamento.
+If Alltrim(RETCODUSR())$ "000099/000117/000101"
+
+	lRet:=.T.
+Else
+
+	//--Filtra a condição de acordo com o risco do cliente.
+	If !Empty(M->C5_CLIENTE)
+		
+		//--Risco do cliente.
+		dbSelectArea("SA1")
+		dbSetOrder(1)
+		If dbSeek(xFilial("SA1")+M->C5_CLIENTE+M->C5_LOJACLI)
+					
+			cRisco:=SA1->A1_RISCO
+		EndIf
+		
+		//--Busca na ZZ8 as condições de pagamento de acordo com o risco do cliente.
+		If !Empty(cRisco)
+			dbSelectArea("ZZ8")
+			dbSetOrder(1)
+			If dbSeek(xFilial("ZZ8")+cRisco+M->C5_CONDPAG)
+				
+				lRet:=.T.
+			Else
+				Aviso("Nutratta","Condição de pagamento inválida para o risco de crédito do cliente."+Chr(13)+Chr(10);
+				+"Favor verificar o cadastro de condição de pagamento x risco de crédito. ",{"Voltar"},2)
+				lRet:=.F.	
+			EndIf
+		Else
+			Aviso("Nutratta","Risco de crédito do cliente não informado."+Chr(13)+Chr(10);
+			+" Favor verificar o cadastro do cliente.",{"Voltar"},2)
+			lRet:=.F.
+		EndIf
+	Else
+		Aviso("Nutratta","Favor preencher o código do cliente,para que sejam disponibilizadas suas condições de pagamento."+Chr(13)+Chr(10),{"Voltar"},2)
+		lRet:=.F.		
+	EndIf
+EndIf
+
+RestArea(aAreaSE4)
+Return(lRet)
+
+

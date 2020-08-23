@@ -1,0 +1,44 @@
+#Include 'Protheus.ch'
+#Include 'Topconn.ch'
+                 
+#INCLUDE "rwmake.ch"
+#Include 'Protheus.ch'
+#Include 'Parmtype.ch'
+//Nao utilizado.mover.
+/*
+========================================================================================================================
+Rotina----: ZZJCODIGO
+Autor-----: Davidson-Nutratta
+Data------: 27/07/2017
+========================================================================================================================
+Descrição-: Cadastro de Locais de Entrega 
+Uso-------: Logistica Nutratta
+========================================================================================================================
+*/
+User Function ZZJCODIGO(ZZJ_CLIENT)
+	LOCAL CQRYZZJ		:= ""
+	LOCAL CZZJCLIENT	:= ZZJ_CLIENT
+	LOCAL CNEXTZZJCD	:= ""
+       
+	CQRYZZJ	:="	SELECT MAX(ZZJ_CODIGO) AS ZZJ_CODIGO FROM "+RETSQLNAME("ZZJ")
+	CQRYZZJ	+="	WHERE "
+	CQRYZZJ	+="	ZZJ_FILIAL = '"+XFILIAL("ZZJ")+"' "
+	CQRYZZJ +="	AND "
+	CQRYZZJ	+=" ZZJ_CLIENT = '"+CZZJCLIENT+"' "
+
+	IF SELECT("TMZZJ") <> 0
+		TMZZJ->(DBCLOSEAREA())
+	ENDIF
+
+	TCQUERY CQRYZZJ NEW ALIAS "TMZZJ"
+
+	DBSELECTAREA("TMZZJ")
+	TMZZJ->(DBGOTOP())
+	
+	CNEXTZZJCD := VAL(TMZZJ->ZZJ_CODIGO) + 1
+	
+	IF (TMZZJ->(RECCOUNT())) > 0
+		TMZZJ->(DBCLOSEAREA())
+	ENDIF
+			
+Return (PADL(ALLTRIM(CVALTOCHAR(CNEXTZZJCD)),4,"0"))

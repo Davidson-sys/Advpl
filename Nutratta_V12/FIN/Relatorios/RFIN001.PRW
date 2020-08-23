@@ -1,0 +1,2275 @@
+#INCLUDE "PROTHEUS.CH"
+#INCLUDE "RWMAKE.CH"   
+#INCLUDE "TOPCONN.CH"
+#INCLUDE "TBICONN.CH"
+#INCLUDE "COLORS.CH"
+#INCLUDE "RPTDEF.CH"
+#INCLUDE "FWPRINTSETUP.CH"
+
+#DEFINE POS_CEDENTE1	1
+#DEFINE POS_AGENCOB		2
+#DEFINE POS_NUMTIT1		3
+#DEFINE POS_VENCTIT1	4
+#DEFINE POS_SACADO1		5                    
+#DEFINE POS_DTENTREGA	6
+#DEFINE POS_VALDOCTO	7
+
+#DEFINE POS_LINDG1		8
+#DEFINE POS_LOCPAGTO1	9
+#DEFINE POS_VENCTIT2	10
+//#DEFINE POS_CEDENTE2	11
+#DEFINE POS_SACADO2		11
+
+#DEFINE POS_AGENCOB2	12
+#DEFINE POS_DTDOC1		13
+#DEFINE POS_NRODOC1		14
+#DEFINE POS_ESPECDOC1	15
+#DEFINE POS_ACEITE1		16
+#DEFINE POS_DTPROC1		17
+#DEFINE POS_NUMTIT2		18
+#DEFINE POS_CARTEIRA1	19
+#DEFINE POS_ESPECIE1	20
+#DEFINE POS_VALOR1		21
+#DEFINE POS_VLRDOC1		22
+#DEFINE POS_MEN1_1		23
+#DEFINE POS_MEN1_2		24
+#DEFINE POS_MEN1_3		25
+#DEFINE POS_MEN1_4		26
+#DEFINE POS_MEN1_5		27
+#DEFINE POS_MEN1_6		28
+#DEFINE POS_MEN1_7		29
+#DEFINE POS_MEN1_8		30
+#DEFINE POS_MEN1_9		71
+//#DEFINE POS_SAC1		31
+//#DEFINE POS_CNPJ1		32
+//#DEFINE POS_CEI1		33
+//#DEFINE POS_END1		34
+#DEFINE POS_CEDENTE2	31
+#DEFINE POS_CEDCNPJ2	32
+#DEFINE POS_CEDCEI2		33
+#DEFINE POS_CEDEND2		34
+
+#DEFINE POS_LINDG2		35
+#DEFINE POS_LOCPAGTO2	36
+#DEFINE POS_VENCTIT3	37
+#DEFINE POS_CEDENTE3	38
+#DEFINE POS_AGENCOB3	39
+#DEFINE POS_DTDOC2		40
+#DEFINE POS_NRODOC2		41
+#DEFINE POS_ESPECDOC2	42
+#DEFINE POS_ACEITE2		43
+#DEFINE POS_DTPROC2		44
+#DEFINE POS_NUMTIT3		45
+#DEFINE POS_CARTEIRA2	46
+#DEFINE POS_ESPECIE2	47
+#DEFINE POS_VALOR2		48
+#DEFINE POS_VLRDOC2		49
+#DEFINE POS_MEN2_1		50
+#DEFINE POS_MEN2_2		51
+#DEFINE POS_MEN2_3		52
+#DEFINE POS_MEN2_4		53
+#DEFINE POS_MEN2_5		54
+#DEFINE POS_MEN2_6		55
+#DEFINE POS_MEN2_7		56
+#DEFINE POS_MEN2_8		57
+#DEFINE POS_SAC2		58
+#DEFINE POS_CNPJ2		59
+#DEFINE POS_CEI2		60
+#DEFINE POS_END2		61
+#DEFINE POS_USOBANCO1	62
+#DEFINE POS_USOBANCO2	63
+#DEFINE POS_CIP1		64
+#DEFINE POS_CIP2		65
+#DEFINE POS_SACAVA1		66                                                         	
+#DEFINE POS_SACAVA2		67
+#DEFINE POS_MEN2_9      68       
+#DEFINE POS_MEN2_10     69       
+#DEFINE POS_NUMDOC      70
+
+/*
+??????????????????????????????????????????
+??????????????????????????????????????????
+??????????????????????????????????????????
+??rograma  ?RFIN001  ?Autor ?Carlos Daniel             ?Data ? 01/01/13   ??
+??????????????????????????????????????????
+??esc.     ?Relatorio de geracao dos boletos bancarios                        ??
+??         ?                                                                  ??
+??????????????????????????????????????????
+??so       ?Financeiro                                                        ??
+??????????????????????????????????????????
+??icionario?Criar os campos:                                                  ??
+??         ?                                                                  ??
+??         ? EE_C_CODBA - C - 20 - Funcao gerar Cod.Barras                    ??
+??         ? EE_C_LINDI - C - 20 - Funcao gerar Linha Dig.                    ??
+??         ? EE_C_CARTE/CODCART - C - 03 - Carteira de Cobranca               ??
+??         ? EE_C_CARBO - C - 10 - Carteira de cobranca boleto                ??
+??         ?                                                                  ??
+??         ? E1_C_CODBA - C - 44 - Guarda Codigo Barras    //nao visivel      ??
+??         ? E1_C_LINDI - C - 54 - Guarda Linha Digitavel.   //nao visivel    ??
+??         ?                                                                  ??
+??         ?Criar no SX6 o parametro NT_MULTA - Percentual de multa do boleto.??
+??         ?                                                                  ??
+??         ?Aumentar o E1_NUMBCO para 17 devido ao banco do Brasil.           ??
+??         ?                                                                  ??
+??         ? EE_FAXATU.                                                       ??
+??         ?                                                                  ??
+??????????????????????????????????????????
+??????????????????????????????????????????
+??????????????????????????????????????????
+*/
+User Function RFIN001(cNotaIni, cNotaFim, cSerie)
+
+Private cPerg 	:= PADR("RFIN001",10)
+Private cCli1	:= ""
+Private cCli2	:= ""
+Private cBol1	:= ""
+Private cBol2	:= ""
+Private cDadBco  := SuperGetMv("NT_BCORIDF",.F.,.F.)  //GETNEWPAR("NT_DADBCO", "")  //GetMv("NT_DADBCO")
+Private cCodBc1  := Substr(cDadBco,1,3)
+Private cAgencia := Substr(cDadBco,4,5)
+Private cNumCta  := Substr(cDadBco,9,10) 
+
+//Cria os parametros
+CriaSX1()                                                                  
+
+//Chama a tela de parametros
+
+//Liberdade Servicos de Informatica
+//03/03/15 Wander Souza Silva
+//Chamada da Impress? do Boleto
+If cNotaIni == nil
+	If !Pergunte(cPerg,.T.)
+		Return(Nil)
+	EndIf
+Else
+	Pergunte(cPerg,.F.)
+	MV_PAR01:=	"      "
+	MV_PAR02:=	"ZZZZZZ"
+	MV_PAR03:=	"      "
+	MV_PAR04:=	"ZZZZZZ"
+	MV_PAR05:=	"    "
+	MV_PAR06:=	"ZZZZ"
+	MV_PAR07:=	cNotaIni
+	MV_PAR08:=	cNotaFim
+EndIf
+
+cCli1 := mv_par09
+cCli2 := mv_par10
+cBol1 := mv_par11
+cBol2 := mv_par12
+
+//Chama a rotina de impressao do boleto
+Processa({|| U_RFIN001E( mv_par01,mv_par02,mv_par03,mv_par04,mv_par05,mv_par06,mv_par07,mv_par08,mv_par09,mv_par10,mv_par11,mv_par12,mv_par13,mv_par14,mv_par15,mv_par16) })
+
+Return(Nil)
+
+/*
+???????????????????????????????????????
+???????????????????????????????????????
+???????????????????????????????????????
+??rograma  ?RFIN001E ??Autor ?Carlos Daniel    ?Data ? 01/01/13   ??
+???????????????????????????????????????
+??esc.     ?Rotina de processamento dos parametros para geracao dos    ??
+??         ?boletos                                                    ??
+???????????????????????????????????????
+??so       ?Funcao Principal                                           ??
+???????????????????????????????????????
+???????????????????????????????????????
+???????????????????????????????????????      
+*/                    // 1          2       3      4       5        6      7       8      9    10    11     12
+User Function RFIN001E(cBordIni,cBordFim,cCliIni,cCliFim,cLojIni,cLojFim,cNFIni,cNFFim,cCli1,cCli2,cBol1,cBol2)
+																					 
+Local oPrint := Nil
+Local oFonte1:= TFont():New( "Arial",,08,,.T.,,,,.F.,.F.)
+Local oFonte2:= TFont():New( "Arial",,07,,.F.,,,,.F.,.F.)
+Local oFonte3:= TFont():New( "Arial",,14,,.T.,,,,.F.,.F.)
+Local oFonte4:= TFont():New( "Arial",,09,,.T.,,,,.F.,.F.)
+Local cQuery := ""
+Local cMsg   := ""
+Local aMsgs  := {"","","","","","","","","",""}  // informado 9 mensagens no boleto
+Local nTotReg:= 0
+Local nMulta := 0
+Local aAnexos:= {}
+Local oDlgRes:= Nil
+Local oLisRes:= Nil
+Local aCoord := MsAdvSize(.T.)
+Local i
+Local nI       := 0
+Local nAbatim  := 0
+Local nAcresc  := 0
+Local nDecres  := 0
+Local nTipo	   := 1                   
+Local oDlgo
+Local aDados
+Local cDestEmail
+Local cEmailExtra
+Local llImpBol   
+Local _lReimprime		:= .F.
+Local _lPrimeira		:= .T.
+
+Default aDados     	:= {}
+Default cDestEmail 	:= ""
+Default cEmailExtra	:= ""
+Default llImpBol   	:= .F.
+
+Private aPosicoes 		:= Array(71)
+Private aValores 		:= Array(5)
+Private cCodigoBarras   := ""
+Private cLinhaDigitavel := ""
+Private cNNumImp 		:="" 
+Private	_cCNPJ			:= "17316559000128"
+
+If Len(aValores) <= 0
+	aValores := Array(5)
+EndIf       
+
+IF Upper(AllTrim(FunName())) <> "RFIN001"
+	cCli1 := ""
+	cCli2 := ""
+	cBol1 := ""
+	cBol2 := ""
+ENDIF
+
+//cQuery := " SELECT SE1.R_E_C_N_O_ AS REGSE1, SEA.R_E_C_N_O_ AS REGSEA "
+//cQuery += " FROM " + RetSQLName("SEA") + " SEA, " + RetSQLName("SE1") + " SE1 "
+//cQuery += " WHERE SEA.D_E_L_E_T_ = ' 'AND SE1.D_E_L_E_T_ = ' ' "
+//cQuery += " AND EA_FILIAL = '" + xFilial("SEA") + "'"
+//cQuery += " AND EA_NUMBOR BETWEEN  '" + cBordIni + "' AND '" + cBordFim + "'"
+
+cQuery := " SELECT SE1.R_E_C_N_O_ AS REGSE1"
+cQuery 	+= " FROM " + RetSQLName("SE1") + " SE1 " 
+cQuery += " WHERE E1_FILIAL = '" + xFilial("SE1") + "'"
+
+cQuery += " AND E1_CLIENTE BETWEEN '" + cCliIni  + "' AND '" + cCliFim  + "'"
+cQuery += " AND E1_LOJA BETWEEN    '" + cLojIni  + "' AND '" + cLojFim  + "'"
+cQuery += " AND E1_NUM BETWEEN     '" + cNFIni   + "' AND '" + cNFFim   + "'"
+cQuery += " AND E1_PORTADO ='"+ cCodBc1    + "'"
+cQuery += " AND E1_AGEDEP  ='"+ cAgencia   + "'"  
+//cQuery += " AND E1_CONTA   ='"+ cNFFim   + "'"
+cQuery += " AND SE1.D_E_L_E_T_ = ' ' "  
+
+//Define filtros adicionais quando a impressao do boleto eh efetuada de forma manual
+If Upper(AllTrim(FunName())) == "RFIN001"
+
+	cQuery += " AND E1_EMISSAO BETWEEN  '"  + DtoS(MV_PAR13) + "' AND '" + DtoS(MV_PAR14) + "'"
+	cQuery += " AND E1_VENCTO BETWEEN   '"  + DtoS(MV_PAR15) + "' AND '" + DtoS(MV_PAR16) + "'"
+	
+EndIf
+
+//cQuery += " AND E1_PREFIXO = EA_PREFIXO"
+//cQuery += " AND E1_NUM     = EA_NUM"
+//cQuery += " AND E1_PARCELA = EA_PARCELA"
+//cQuery += " AND E1_TIPO    = EA_TIPO"
+//cQuery += " AND E1_SALDO > 0"
+
+if Select("TMP_BOL") > 0
+	TMP_BOL->(dbCloseArea())
+ENDIF                       
+
+dbUseArea(.T.,"TOPCONN",TCGenQry(,,cQuery),"TMP_BOL",.F.,.T.)   
+//TCQUERY cQuery NEW ALIAS "TMP_BOL"
+TMP_BOL->(DBGOTOP())
+
+If TMP_BOL->(Eof())
+	llImpBol := .F.
+	MsgAlert("Tiulo(s) nao localizados com os parametros informados, possiveis causas:"+CHR(13)+ "   1. Tiulo nao esta no bordero procure o departamento financeiro"+CHR(13)+"   2. Algum dado informado nos par?etros esta incorreto.")
+	Return(Nil)
+EndIf
+
+ProcRegua(nTotReg)
+
+//Valida o diretorio dos boletos
+MakeDir("\BOLETOS_EMAIL\")
+
+//Inicializa o objeto do relatorio
+//Se impressora
+If nTipo == 1
+	lPreview := .T.
+	oPrint:= TMSPrinter():New("Boleto Laser")
+	oPrint:SetPortrait()
+	oPrint:SetPaperSize(DMPAPER_A4)
+EndIf   
+
+//Desenha a moldura do boleto
+While TMP_BOL->(!Eof())
+	
+	IncProc("Gerando Boletos...")
+	
+	//Posiciona nas tabelas em uso pelo boleto
+	dbSelectArea("SE1")
+	SE1->(dbGoTo(TMP_BOL->REGSE1))
+	
+	//Se envia por e-mail
+	If nTipo == 2
+		cNomeArq := StrTran(SE1->E1_PREFIXO+SE1->E1_NUM+SE1->E1_PARCELA+SE1->E1_TIPO+SE1->E1_CLIENTE+SE1->E1_LOJA," ","")
+		cCamArq  := "\BOLETOS_EMAIL\"
+		lPreview := .T.
+		oPrint   := TMSPrinter():New(AllTrim(cNomeArq))
+		oPrint:SetPortrait()
+		oPrint:SetPaperSize(9)
+	EndIf
+	
+	//Tabela de Borderos
+//	dbSelectArea("SEA")
+//	SEA->(dbGoTo(TMP_BOL->REGSEA))
+	
+	//Cadastro de Clientes
+	dbSelectArea("SA1")
+	SA1->(dbSetOrder(1))
+	SA1->(dbSeek(xFilial("SA1")+SE1->E1_CLIENTE+SE1->E1_LOJA ))
+	
+	//Cadastro de parametros bancos
+	/*dbSelectArea("SEE")
+	SEE->(dbSetOrder(1))
+	If !SEE->(dbSeek(xFilial("SEE")+SEA->EA_PORTADO+SEA->EA_AGEDEP+SEA->EA_NUMCON ))
+		MsgAlert("Tabela de parametros bancarios nao localizada para o banco+agencia+conta (" + SEA->EA_PORTADO+SEA->EA_AGEDEP+SEA->EA_NUMCON + ")")
+		TMP_BOL->(dbSkip())
+		Loop
+	EndIf
+	*/
+	//Substitui as variaveis do boleto
+	If Len(aDados) <= 0
+		nAbatim     := SomaAbat(SE1->E1_PREFIXO,SE1->E1_NUM,SE1->E1_PARCELA,"R",1,,SE1->E1_CLIENTE,SE1->E1_LOJA)
+		nAcresc     := SE1->E1_ACRESC
+		nDecres     := SE1->E1_DECRESC
+		nSaldo      := SE1->E1_SALDO
+		aValores[1] := SE1->E1_VENCTO
+		aValores[2] := nSaldo + nAcresc - nAbatim - nDecres
+		aValores[3]	:= ""
+		aValores[4]	:= ""
+		aValores[5]	:= ""
+		cDestEmail 	:= SA1->A1_EMAIL
+		
+		If Len(AllTrim(cEmailExtra)) <> 0
+			cDestEmail := AllTrim(cDestEmail) + ";" + AllTrim(cEmailExtra)
+		EndIf
+	EndIf
+	
+
+	IF !Empty(SE1->E1_NUMBCO) .and. (_lPrimeira .or.  !_lReimprime) //inicia aqui a valida?o se esta preenchido ou n?			
+		
+		_lPrimeira 	:= .F.
+		
+		DEFINE MSDIALOG oDlgo TITLE "Opcao de Impressao" FROM 000, 000  TO 180, 380 COLORS 0, 16777215 PIXEL
+		@ 200,1 TO 380,380 of oDlgo     
+		@ 01,01 Say " Boleto ja impresso com o seguinte numero: "+ALLTRIM(SE1->E1_NUMBCO)
+		@ 15,01 Say " Atencao: Se opcao selecionada for Imprimir Novo Boleto, o     "
+		@ 30,01 Say " mesmo devera ser entregue ao cliente e gerado novo Cnab.      "
+		@ 50,05 BUTTON "Reimprimir Boleto"    SIZE 60,10 ACTION (_lReimprime := .T.,Close(oDlgo))
+		@ 50,80 BUTTON "Imprimir Novo Boleto" SIZE 60,10 ACTION (_lReimprime := .F.,Close(oDlgo)) 
+		ACTIVATE MSDIALOG oDlgo CENTERED
+	ENDIF
+	
+	IF _lReimprime	
+		//?????????????????
+		//?Inicia o controle de transacao.?
+		//?????????????????
+		cCodigoBarras   := SE1->E1_C_CODBA
+		cLinhaDigitavel := SE1->E1_C_LINDI
+	Else 
+		
+		//Posiciona na SEE como banco e agencia do Portador.
+		//EE_FILIAL+EE_CODIGO+EE_AGENCIA	   	
+		DbSelectArea("SEE")        
+		DbSetOrder(1)
+		DbSeek(xFilial("SEE")+cCodBc1+cAgencia)	   	
+	   	
+		Begin Transaction
+			//Gera a expressao numerica do codigo de barras e linha digitavel
+			cCodigoBarras   := &(SEE->EE_C_CODBA) //CodigoBarras()
+			SE1->(RecLock("SE1",.F.))
+			SE1->E1_C_CODBA := cCodigoBarras
+			SE1->(MsUnlock())
+			
+			cLinhaDigitavel := &(SEE->EE_C_LINDI) //LinhaDigitavel(cCodigoBarras)
+			SE1->(RecLock("SE1",.F.))
+			SE1->E1_C_LINDI := cLinhaDigitavel
+			SE1->(MsUnlock())
+			
+			//??????????????????????????????
+			//?Finaliza o controle de transacao.                        ?
+			//??????????????????????????????
+		End Transaction
+	
+	EndIf    
+	
+	nMulta := 0
+//	dbSelectArea("SE4")
+//	dbSetOrder(1)
+//	If dbSeek(SE1->E1_FILORIG+SE1->E1_C_COPGT)
+//   		nMulta := round((SE4->E4_C_MULTA / 100) * aValores[2] ,2)
+// 	EndIf
+	nMulta	:= SE1->E1_MULTA
+		
+   	//Round(aValores[2] * 100 / SE1->E1_MULTA,0) //(GetNewPar("NT_MULTA",2)/100)// Parametro para informar o percentual da multa igual a 2%
+   	//nJuros := alltrim(TransForm(U_BUSCATAXA("BOL","BO"),"@E 9,999,999.99"))
+   	//AllTrim(Str((SE1->E1_PORCJUR/100)*aValores[2],,2))//STR(SE1->E1_VALJUR))//AllTrim(Str((SE1->E1_PORCJUR/30)*SE1->E1_VALOR)) //GetNewPar("CP_TXJUR",0.003)  // Parametro para calculo do valor dos juros diarios.
+	
+	/*If SEE->EE_CODIGO == "001" 
+		nJuros := Alltrim(GETMV("BOL_001"))
+	ElseIf SEE->EE_CODIGO == "237" 
+		nJuros := Alltrim(GETMV("BOL_237"))	
+	ElseIf SEE->EE_CODIGO == "341" 
+		nJuros := Alltrim(GETMV("BOL_341"))
+	EndIf*/
+	
+	nJuros :=  AllTrim(Str(Round(((GETMV("NT_MULTA")/100)/30)*SE1->E1_VALOR,2)))
+	
+	//Formata as mensagens do boleto
+   	//aMsgs[1] := cCli1//"MULTA DE R$ " +ALLTRIM(Transform(nMulta,"@E 999,999.99")) + " AP? O VENCIMENTO"
+	//aMsgs[2] := cCli2//"AP? O VENCIMENTO COBRAR R$ " +ALLTRIM(Transform(nJuros,"@E 999,999.99")) + " POR DIA DE ATRASO"
+	aMsgs[1] := cBol1 //"PROTESTAR AP? 05 DIAS DO VENCIMENTO"
+	aMsgs[2] := cBol2 //""
+	aMsgs[3] :=	"ACORDO JUDICIAL"
+	aMsgs[4] :="1% DE JUROS"
+	aMsgs[5] := "3% DE MULTA" //"ACORDO REFERENTE AS NOTAS FISCAIS  13866 Parc 1 e 13866 Parc 2"//"DESCONTO DE 1% ATE A DATA DO VENCIMENTO "//"AP? O VENCIMENTO COBRAR R$ " + nJuros  + " POR DIA DE ATRASO"
+	aMsgs[6] := ""//"APOS O VENCIMENTO INCLUIR MULTA DE 5%. "//"MULTA DE R$ " + Alltrim(TransForm(nMulta,"@E 9,999,999.99")) + " AP? O VENCIMENTO"	
+	aMsgs[7] := ""//"APOS O VENCIMENTO INCLUIR JUROS DE 3% AO MES."
+	aMsgs[8] := ""//	"PROTESTO 10 DIAS APOS O VENCIMENTO."
+	aMsgs[9] := "Texto de responsabilidade do cedente " + "          BORDERO: " + AllTrim(SE1->E1_NUMBOR)	
+			
+//	IF SEE->EE_CODIGO = "001"
+//		aMsgs[10] := "TODAS AS INFORMA?ES DESTE BLOQUETO S? DE EXCLUSIVA RESPONSABILIDADE DO BENEFICIARIO."
+//	ENDIF
+	
+	//Imprime o LAYOUT do boleto
+	RFIN001B(@oPrint)
+	
+	//Posiciona na SEE como banco e agencia do Portador.
+	DbSelectArea("SEE")        
+	DbSetOrder(1)
+	DbSeek(xFilial("SEE")+cCodBc1+cAgencia)	  
+	
+	//Substitui os campos pelos conteudos
+	oPrint:Say(410,060,aValores[3],oFonte1)
+	oPrint:Say(460,060,aValores[4],oFonte1)
+	oPrint:Say(510,060,aValores[5],oFonte1)
+	
+	oPrint:Say(aPosicoes[POS_CEDENTE1 ,1],aPosicoes[POS_CEDENTE1 ,2],UpPer(AllTrim(SM0->M0_NOMECOM)) + "-CNPJ: " + TransForm(_cCNPJ,"@R 99.999.999/9999-99")   ,oFonte1)
+   	oPrint:Say(211 ,60,AllTrim(SM0->M0_ENDENT) + " - " + AllTrim(SM0->M0_BAIRENT) + " CEP: " + TransForm(SM0->M0_CEPENT,"@R 99999-999") + " - " + AllTrim(SM0->M0_CIDENT) + " - " + SM0->M0_ESTENT,oFonte1)
+   	IF SEE->EE_CODIGO == "756"
+   		oPrint:Say(aPosicoes[POS_AGENCOB ,1],aPosicoes[POS_AGENCOB ,2],SubStr(SEA->EA_AGEDEP,1,4)+ "-" +SubStr(SEA->EA_AGEDEP,5,1)+"/"+StrZero(Val(SubStr(AllTrim(SEE->EE_CODEMP),1,LEN(AllTrim(SEE->EE_CODEMP))-1)),7)+ "-" +SubStr(SEE->EE_CODEMP,LEN(AllTrim(SEE->EE_CODEMP)),1),oFonte4)
+   	ELSEIF SEE->EE_CODIGO == "033"                                                                                                                                                                                                                                                                     
+   		oPrint:Say(aPosicoes[POS_AGENCOB ,1],aPosicoes[POS_AGENCOB ,2],ALLTRIM(SEA->EA_AGEDEP)+" /",oFonte4)
+	ELSE
+		oPrint:Say(aPosicoes[POS_AGENCOB  ,1],aPosicoes[POS_AGENCOB  ,2],SubStr(SEA->EA_AGEDEP,1,4)+ "-" +SubStr(SEA->EA_AGEDEP,5,1)+"/"+StrZero(Val(SubStr(AllTrim(SEA->EA_NUMCON),1,LEN(AllTrim(SEA->EA_NUMCON))-1)),7)+ "-" +SubStr(SEA->EA_NUMCON,LEN(AllTrim(SEA->EA_NUMCON)),1),oFonte4)
+    END
+   	IF SEE->EE_CODIGO == "237" 
+		oPrint:Say(aPosicoes[POS_NUMTIT1  ,1],aPosicoes[POS_NUMTIT1  ,2],AllTrim(SEE->EE_CODCART)+"/"+SubStr(SE1->E1_NUMBCO,1,11)+"-"+SubStr(SE1->E1_NUMBCO,12,1),oFonte4)
+	ELSEIF SEE->EE_CODIGO == "756" 
+   		oPrint:Say(aPosicoes[POS_NUMTIT1  ,1],aPosicoes[POS_NUMTIT1  ,2],SubStr(SE1->E1_NUMBCO,1,7)+"-"+SubStr(SE1->E1_NUMBCO,8,1),oFonte4)
+   	ELSEIF SEE->EE_CODIGO == "341" 
+		oPrint:Say(aPosicoes[POS_NUMTIT1  ,1],aPosicoes[POS_NUMTIT1  ,2],SubStr(SE1->E1_NUMBCO,1,3)+"/"+SubStr(SE1->E1_NUMBCO,4,8)+"-"+SubStr(SE1->E1_NUMBCO,12,1),oFonte4)
+	ELSEIF SEE->EE_CODIGO == "033" 
+   		oPrint:Say(aPosicoes[POS_NUMTIT1  ,1],aPosicoes[POS_NUMTIT1  ,2],SubStr(SE1->E1_NUMBCO,1,12)+"-"+SubStr(SE1->E1_NUMBCO,13,1),oFonte4)
+	ELSEIF SEE->EE_CODIGO == "001" 
+   		oPrint:Say(aPosicoes[POS_NUMTIT1  ,1],aPosicoes[POS_NUMTIT1  ,2],SubStr(SE1->E1_NUMBCO,1,11)+"-"+SubStr(SE1->E1_NUMBCO,12,1),oFonte4)
+	ELSE
+   		oPrint:Say(aPosicoes[POS_NUMTIT1  ,1],aPosicoes[POS_NUMTIT1  ,2],SubStr(SE1->E1_NUMBCO,1,Len(AllTrim(SE1->E1_NUMBCO))),oFonte4)
+	END
+	oPrint:Say(aPosicoes[POS_VENCTIT1 ,1],aPosicoes[POS_VENCTIT1 ,2],DtoC(aValores[1])                       ,oFonte4)
+	oPrint:Say(aPosicoes[POS_NUMDOC   ,1],aPosicoes[POS_NUMDOC   ,2],AllTrim(SE1->E1_PREFIXO)+"/"+ALLTRIM(SE1->E1_NUM)+" Parc.:"+ALLTRIM(SE1->E1_PARCELA),oFonte4)
+	oPrint:Say(aPosicoes[POS_SACADO1  ,1],aPosicoes[POS_SACADO1  ,2],UpPer(AllTrim(SA1->A1_NOME)) + ' - ' + SA1->A1_COD ,oFonte4)
+	oPrint:Say(aPosicoes[POS_DTENTREGA,1],aPosicoes[POS_DTENTREGA,2],DtoC(dDataBase)                         ,oFonte4)
+	oPrint:Say(aPosicoes[POS_VALDOCTO ,1],aPosicoes[POS_VALDOCTO ,2],TransForm(aValores[2],"@E 9,999,999.99"),oFonte4)
+	oPrint:Say(aPosicoes[POS_LINDG1   ,1],aPosicoes[POS_LINDG1   ,2],cLinhaDigitavel                         ,oFonte3)
+   	IF SEE->EE_CODIGO == "237"
+   		oPrint:Say(aPosicoes[POS_LOCPAGTO1,1],aPosicoes[POS_LOCPAGTO1,2],"Pag?el preferencialmente na Rede Bradesco ou Bradesco Expresso",oFonte1)
+   	ELSE	
+		oPrint:Say(aPosicoes[POS_LOCPAGTO1,1],aPosicoes[POS_LOCPAGTO1,2],"AT?O VENCIMENTO PAG?EL EM QUALQUER AG?CIA BANC?IA.",oFonte4)
+	ENDIF
+	oPrint:Say(aPosicoes[POS_VENCTIT2 ,1],aPosicoes[POS_VENCTIT2 ,2],DtoC(aValores[1])                       ,oFonte3,,,,1)
+//	oPrint:Say(aPosicoes[POS_CEDENTE2 ,1],aPosicoes[POS_CEDENTE2 ,2],UpPer(AllTrim(SM0->M0_NOMECOM)) + Space (10) + " CNPJ: " + TransForm(SM0->M0_CGC,"@R 99.999.999/9999-99")  ,oFonte1) //ALTERACAO VINICIUS
+	oPrint:Say(aPosicoes[POS_SACADO2 ,1],aPosicoes[POS_SACADO2 ,2],UpPer(AllTrim(SA1->A1_NOME)) + ' - ' + SA1->A1_COD + Space (10) + " CNPJ: " + Iif(Len(AllTrim(SA1->A1_CGC)) <= 11,TransForm(SA1->A1_CGC,"@R 999.999.999-99"),TransForm(SA1->A1_CGC,"@R 99.999.999/9999-99")) ,oFonte4) //ALTERACAO VINICIUS
+
+	IF SEE->EE_CODIGO == "341"
+		oPrint:Say(aPosicoes[POS_AGENCOB2 ,1],aPosicoes[POS_AGENCOB2 ,2],SubStr(SEA->EA_AGEDEP,1,4)+ "/"+StrZero(Val(SubStr(AllTrim(SEA->EA_NUMCON),1,LEN(AllTrim(SEA->EA_NUMCON))-1)),7)+ "-" +SubStr(SEA->EA_NUMCON,LEN(AllTrim(SEA->EA_NUMCON)),1),oFonte4,,,,1)
+	ELSEIF SEE->EE_CODIGO == "033"
+   		oPrint:Say(aPosicoes[POS_AGENCOB2 ,1],aPosicoes[POS_AGENCOB2 ,2],ALLTRIM(SEA->EA_AGEDEP)+" / 3405613",oFonte4,,,,1)
+	ELSEIF SEE->EE_CODIGO == "756"
+		oPrint:Say(aPosicoes[POS_AGENCOB2 ,1],aPosicoes[POS_AGENCOB2 ,2],SubStr(SEA->EA_AGEDEP,1,4)+ "-" +SubStr(SEA->EA_AGEDEP,5,1)+"/"+StrZero(Val(SubStr(AllTrim(SEE->EE_CODEMP),1,LEN(AllTrim(SEE->EE_CODEMP))-1)),7)+ "-" +SubStr(SEE->EE_CODEMP,LEN(AllTrim(SEE->EE_CODEMP)),1),oFonte4,,,,1)
+	ELSE
+		oPrint:Say(aPosicoes[POS_AGENCOB2 ,1],aPosicoes[POS_AGENCOB2 ,2],SubStr(SEA->EA_AGEDEP,1,4)+ "-" +SubStr(SEA->EA_AGEDEP,5,1)+"/"+StrZero(Val(SubStr(AllTrim(SEA->EA_NUMCON),1,LEN(AllTrim(SEA->EA_NUMCON))-1)),7)+ "-" +SubStr(SEA->EA_NUMCON,LEN(AllTrim(SEA->EA_NUMCON)),1),oFonte4,,,,1)
+	END
+	oPrint:Say(aPosicoes[POS_DTDOC1   ,1],aPosicoes[POS_DTDOC1   ,2],DtoC(SE1->E1_EMISSAO)                   ,oFonte4)
+	oPrint:Say(aPosicoes[POS_NRODOC1  ,1],aPosicoes[POS_NRODOC1  ,2],AllTrim(SE1->E1_PREFIXO)+"/"+ALLTRIM(SE1->E1_NUM)+" Parc.:"+ALLTRIM(SE1->E1_PARCELA),oFonte4)
+	oPrint:Say(aPosicoes[POS_ESPECDOC1,1],aPosicoes[POS_ESPECDOC1,2],"DM",oFonte4)
+	oPrint:Say(aPosicoes[POS_ACEITE1  ,1],aPosicoes[POS_ACEITE1  ,2],"N?",oFonte4)
+	oPrint:Say(aPosicoes[POS_DTPROC1  ,1],aPosicoes[POS_DTPROC1  ,2],DtoC(dDataBase),oFonte4)
+	IF SEE->EE_CODIGO == "237" 
+   		oPrint:Say(aPosicoes[POS_NUMTIT2  ,1],aPosicoes[POS_NUMTIT2  ,2],AllTrim(SEE->EE_CODCART)+"/"+SubStr(SE1->E1_NUMBCO,1,11)+"-"+SubStr(SE1->E1_NUMBCO,12,1),oFonte4,,,,1)
+	ELSEIF SEE->EE_CODIGO == "756" 
+		oPrint:Say(aPosicoes[POS_NUMTIT2  ,1],aPosicoes[POS_NUMTIT2  ,2],SubStr(SE1->E1_NUMBCO,1,7)+"-"+SubStr(SE1->E1_NUMBCO,8,1),oFonte4,,,,1)
+	ELSEIF SEE->EE_CODIGO == "341" 
+   		oPrint:Say(aPosicoes[POS_NUMTIT2  ,1],aPosicoes[POS_NUMTIT2  ,2],SubStr(SE1->E1_NUMBCO,1,3)+"/"+SubStr(SE1->E1_NUMBCO,4,8)+"-"+SubStr(SE1->E1_NUMBCO,12,1),oFonte4,,,,1)
+	ELSEIF SEE->EE_CODIGO == "033" 
+   		oPrint:Say(aPosicoes[POS_NUMTIT2  ,1],aPosicoes[POS_NUMTIT2  ,2],SubStr(SE1->E1_NUMBCO,1,12)+"-"+SubStr(SE1->E1_NUMBCO,13,1),oFonte4,,,,1)
+	ELSEIF SEE->EE_CODIGO == "001" 
+   		oPrint:Say(aPosicoes[POS_NUMTIT2  ,1],aPosicoes[POS_NUMTIT2  ,2],SubStr(SE1->E1_NUMBCO,1,11)+"-"+SubStr(SE1->E1_NUMBCO,12,1),oFonte4,,,,1)
+	ELSE
+   		oPrint:Say(aPosicoes[POS_NUMTIT2  ,1],aPosicoes[POS_NUMTIT2  ,2],SubStr(SE1->E1_NUMBCO,1,Len(AllTrim(SE1->E1_NUMBCO))),oFonte4,,,,1)
+	END
+	oPrint:Say(aPosicoes[POS_CARTEIRA1,1],aPosicoes[POS_CARTEIRA1,2],AllTrim(SEE->EE_C_CARBO),oFonte4)
+	oPrint:Say(aPosicoes[POS_ESPECIE1 ,1],aPosicoes[POS_ESPECIE1 ,2],"R$",oFonte4)
+	oPrint:Say(aPosicoes[POS_VLRDOC1  ,1],aPosicoes[POS_VLRDOC1  ,2],AllTrim(TransForm(aValores[2],"@E 9,999,999.99")),oFonte3,,,,1)
+
+	IF SEE->EE_CODIGO <> "237"
+		oPrint:Say(aPosicoes[POS_VALOR1   ,1],aPosicoes[POS_VALOR1  ,2],AllTrim(TransForm(aValores[2],"@E 9,999,999.99")),oFonte4)
+	endif
+
+	//oPrint:Say(aPosicoes[POS_MEN1_1   ,1],aPosicoes[POS_MEN1_1   ,2],SubStr(aMsgs[1],1,75),oFonte1)
+	//oPrint:Say(aPosicoes[POS_MEN1_2   ,1],aPosicoes[POS_MEN1_2   ,2],SubStr(aMsgs[2],1,75),oFonte1)
+	oPrint:Say(aPosicoes[POS_MEN1_3   ,1],aPosicoes[POS_MEN1_3   ,2],SubStr(aMsgs[3],1,95),oFonte1)
+    oPrint:Say(aPosicoes[POS_MEN1_4   ,1],aPosicoes[POS_MEN1_4   ,2],SubStr(aMsgs[4],1,95),oFonte1)
+	oPrint:Say(aPosicoes[POS_MEN1_5   ,1],aPosicoes[POS_MEN1_5   ,2],SubStr(aMsgs[5],1,95),oFonte1)
+    oPrint:Say(aPosicoes[POS_MEN1_6   ,1],aPosicoes[POS_MEN1_6   ,2],SubStr(aMsgs[6],1,120),oFonte1)
+    oPrint:Say(aPosicoes[POS_MEN1_7   ,1],aPosicoes[POS_MEN1_7   ,2],SubStr(aMsgs[7],1,120),oFonte1)
+    oPrint:Say(aPosicoes[POS_MEN1_8   ,1],aPosicoes[POS_MEN1_8   ,2],SubStr(aMsgs[8],1,120),oFonte1)    
+	oPrint:Say(aPosicoes[POS_MEN1_9   ,1],aPosicoes[POS_MEN1_9   ,2],SubStr(aMsgs[9],1,95),oFonte1)
+
+	//oPrint:Say(aPosicoes[POS_SAC1     ,1],aPosicoes[POS_SAC1     ,2],SA1->A1_NOME,oFonte1)
+	//oPrint:Say(aPosicoes[POS_CNPJ1    ,1],aPosicoes[POS_CNPJ1    ,2],Iif(Len(AllTrim(SA1->A1_CGC)) <= 11,TransForm(SA1->A1_CGC,"@R 999.999.999-99"),TransForm(SA1->A1_CGC,"@R 99.999.999/9999-99")),oFonte1)
+	//oPrint:Say(aPosicoes[POS_END1     ,1],aPosicoes[POS_END1     ,2],AllTrim(SA1->A1_END) + " - " + AllTrim(SA1->A1_BAIRRO) + " CEP: " + TransForm(SA1->A1_CEP,"@R 99999-999") + " - " + AllTrim(SA1->A1_MUN) + " - " + SA1->A1_EST,oFonte1)
+	oPrint:Say(aPosicoes[POS_CEDENTE2	,1],aPosicoes[POS_CEDENTE2	,2],UpPer(AllTrim(SM0->M0_NOMECOM)),oFonte1)
+	oPrint:Say(aPosicoes[POS_CEDCNPJ2	,1],aPosicoes[POS_CEDCNPJ2	,2],TransForm(_cCNPJ,"@R 99.999.999/9999-99"),oFonte1)
+	oPrint:Say(aPosicoes[POS_CEDEND2	,1],aPosicoes[POS_CEDEND2	,2],AllTrim(SM0->M0_ENDENT) + " - " + AllTrim(SM0->M0_BAIRENT) + " CEP: " + TransForm(SM0->M0_CEPENT,"@R 99999-999") + " - " + AllTrim(SM0->M0_CIDENT) + " - " + SM0->M0_ESTENT,oFonte1)
+
+	oPrint:Say(aPosicoes[POS_LINDG2   ,1],aPosicoes[POS_LINDG2   ,2],cLinhaDigitavel,oFonte3)     
+
+	IF SEE->EE_CODIGO == "237"
+		oPrint:Say(aPosicoes[POS_LOCPAGTO2,1],aPosicoes[POS_LOCPAGTO2,2],"Pagavel preferencialmente na Rede Bradesco ou Bradesco Expresso.",oFonte4)
+	ELSE
+		oPrint:Say(aPosicoes[POS_LOCPAGTO2,1],aPosicoes[POS_LOCPAGTO2,2],"ATE O VENCIMENTO PAG?EL EM QUALQUER AGENCIA BANCARIA.",oFonte4)
+	ENDIF
+
+	oPrint:Say(aPosicoes[POS_VENCTIT3 ,1],aPosicoes[POS_VENCTIT3 ,2],DtoC(aValores[1]),oFonte3,,,,1)
+	oPrint:Say(aPosicoes[POS_CEDENTE3 ,1],aPosicoes[POS_CEDENTE3 ,2],UpPer(AllTrim(SM0->M0_NOMECOM))  + Space (10) + " CNPJ: " + TransForm(_cCNPJ,"@R 99.999.999/9999-99")   ,oFonte4)
+	IF SEE->EE_CODIGO == "341"
+		oPrint:Say(aPosicoes[POS_AGENCOB3 ,1],aPosicoes[POS_AGENCOB3 ,2],SubStr(SEA->EA_AGEDEP,1,4)+ "/"+StrZero(Val(SubStr(AllTrim(SEA->EA_NUMCON),1,LEN(AllTrim(SEA->EA_NUMCON))-1)),7)+ "-" +SubStr(SEA->EA_NUMCON,LEN(AllTrim(SEA->EA_NUMCON)),1),oFonte4,,,,1)
+	ELSEIF SEE->EE_CODIGO == "033"
+   		oPrint:Say(aPosicoes[POS_AGENCOB3 ,1],aPosicoes[POS_AGENCOB3 ,2],ALLTRIM(SEA->EA_AGEDEP)+" / 3405613",oFonte4,,,,1)
+	ELSEIF SEE->EE_CODIGO == "756"
+		oPrint:Say(aPosicoes[POS_AGENCOB3 ,1],aPosicoes[POS_AGENCOB3 ,2],SubStr(SEA->EA_AGEDEP,1,4)+ "-" +SubStr(SEA->EA_AGEDEP,5,1)+"/"+StrZero(Val(SubStr(AllTrim(SEE->EE_CODEMP),1,LEN(AllTrim(SEE->EE_CODEMP))-1)),7)+ "-" +SubStr(SEE->EE_CODEMP,LEN(AllTrim(SEE->EE_CODEMP)),1),oFonte4,,,,1)
+	ELSE
+		oPrint:Say(aPosicoes[POS_AGENCOB3 ,1],aPosicoes[POS_AGENCOB3 ,2],SubStr(SEA->EA_AGEDEP,1,4)+ "-" +SubStr(SEA->EA_AGEDEP,5,1)+"/"+StrZero(Val(SubStr(AllTrim(SEA->EA_NUMCON),1,LEN(AllTrim(SEA->EA_NUMCON))-1)),7)+ "-" +SubStr(SEA->EA_NUMCON,LEN(AllTrim(SEA->EA_NUMCON)),1),oFonte4,,,,1)
+	END
+	oPrint:Say(aPosicoes[POS_DTDOC2   ,1],aPosicoes[POS_DTDOC2   ,2],DtoC(SE1->E1_EMISSAO)   ,oFonte4)
+	oPrint:Say(aPosicoes[POS_NRODOC2  ,1],aPosicoes[POS_NRODOC2  ,2],AllTrim(SE1->E1_PREFIXO)+"/"+ALLTRIM(SE1->E1_NUM)+" Parc.:"+ALLTRIM(SE1->E1_PARCELA),oFonte4)
+	oPrint:Say(aPosicoes[POS_ESPECDOC2,1],aPosicoes[POS_ESPECDOC2,2],"DM",oFonte4)
+	oPrint:Say(aPosicoes[POS_ACEITE2  ,1],aPosicoes[POS_ACEITE2  ,2],"N?",oFonte4)
+	oPrint:Say(aPosicoes[POS_DTPROC2  ,1],aPosicoes[POS_DTPROC2  ,2],DtoC(dDataBase)         ,oFonte1)
+	IF SEE->EE_CODIGO == "237" 
+		oPrint:Say(aPosicoes[POS_NUMTIT3  ,1],aPosicoes[POS_NUMTIT3  ,2],AllTrim(SEE->EE_CODCART)+"/"+SubStr(SE1->E1_NUMBCO,1,11)+"-"+SubStr(SE1->E1_NUMBCO,12,1),oFonte4,,,,1)
+	ELSEIF SEE->EE_CODIGO == "756" 
+   		oPrint:Say(aPosicoes[POS_NUMTIT3  ,1],aPosicoes[POS_NUMTIT3  ,2],SubStr(SE1->E1_NUMBCO,1,7)+"-"+SubStr(SE1->E1_NUMBCO,8,1),oFonte4,,,,1)
+	ELSEIF SEE->EE_CODIGO == "341" 
+   		oPrint:Say(aPosicoes[POS_NUMTIT3  ,1],aPosicoes[POS_NUMTIT3  ,2],SubStr(SE1->E1_NUMBCO,1,3)+"/"+SubStr(SE1->E1_NUMBCO,4,8)+"-"+SubStr(SE1->E1_NUMBCO,12,1),oFonte4,,,,1)
+	ELSEIF SEE->EE_CODIGO == "033" 
+   		oPrint:Say(aPosicoes[POS_NUMTIT3  ,1],aPosicoes[POS_NUMTIT3  ,2],SubStr(SE1->E1_NUMBCO,1,12)+"-"+SubStr(SE1->E1_NUMBCO,13,1),oFonte4,,,,1)
+	ELSEIF SEE->EE_CODIGO == "001" 
+//  	oPrint:Say(aPosicoes[POS_NUMTIT3  ,1],aPosicoes[POS_NUMTIT3  ,2],SubStr(SE1->E1_NUMBCO,1,17),oFonte4)
+   		oPrint:Say(aPosicoes[POS_NUMTIT3  ,1],aPosicoes[POS_NUMTIT3  ,2],SubStr(SE1->E1_NUMBCO,1,11)+"-"+SubStr(SE1->E1_NUMBCO,12,1),oFonte4,,,,1)
+	ELSE
+   		oPrint:Say(aPosicoes[POS_NUMTIT3  ,1],aPosicoes[POS_NUMTIT3  ,2],SubStr(SE1->E1_NUMBCO,1,Len(AllTrim(SE1->E1_NUMBCO))),oFonte4,,,,1)
+	END
+	oPrint:Say(aPosicoes[POS_CARTEIRA2,1],aPosicoes[POS_CARTEIRA2,2],AllTrim(SEE->EE_C_CARBO),oFonte4)
+	oPrint:Say(aPosicoes[POS_ESPECIE2 ,1],aPosicoes[POS_ESPECIE2 ,2],"R$",oFonte4)
+
+	IF SEE->EE_CODIGO <> "237"
+		oPrint:Say(aPosicoes[POS_VALOR2   ,1],aPosicoes[POS_VALOR2   ,2],AllTrim(TransForm(aValores[2],"@E 9,999,999.99")),oFonte4)
+	ENDIF
+
+	oPrint:Say(aPosicoes[POS_VLRDOC2  ,1],aPosicoes[POS_VLRDOC2  ,2],AllTrim(TransForm(aValores[2],"@E 9,999,999.99")),oFonte3,,,,1)
+
+	//oPrint:Say(aPosicoes[POS_MEN2_1   ,1],aPosicoes[POS_MEN2_1   ,2],SubStr(aMsgs[1],1,75),oFonte1)
+	oPrint:Say(aPosicoes[POS_MEN2_3   ,1],aPosicoes[POS_MEN2_3   ,2],SubStr(aMsgs[3],1,95),oFonte1)
+	oPrint:Say(aPosicoes[POS_MEN2_4   ,1],aPosicoes[POS_MEN2_4   ,2],SubStr(aMsgs[4],1,95),oFonte1)
+	oPrint:Say(aPosicoes[POS_MEN2_5   ,1],aPosicoes[POS_MEN2_5   ,2],SubStr(aMsgs[5],1,95),oFonte1)
+	oPrint:Say(aPosicoes[POS_MEN2_6   ,1],aPosicoes[POS_MEN2_6   ,2],SubStr(aMsgs[6],1,120),oFonte1)
+	oPrint:Say(aPosicoes[POS_MEN2_7   ,1],aPosicoes[POS_MEN2_7   ,2],SubStr(aMsgs[7],1,120),oFonte1)
+	oPrint:Say(aPosicoes[POS_MEN2_8   ,1],aPosicoes[POS_MEN2_8   ,2],SubStr(aMsgs[8],1,120),oFonte1)
+	oPrint:Say(aPosicoes[POS_MEN2_9   ,1],aPosicoes[POS_MEN2_9   ,2],SubStr(aMsgs[9],1,95),oFonte1)
+	oPrint:Say(aPosicoes[POS_MEN2_10,1],aPosicoes[POS_MEN2_10,2],SubStr(aMsgs[10],1,95),oFonte1)
+	
+	//IF SEE->EE_CODIGO == "001"     
+		//oPrint:Say(aPosicoes[POS_MEN2_10,1],aPosicoes[POS_MEN2_10,2],SubStr(aMsgs[10],1,95),oFonte1)	
+	//ENDIF
+	oPrint:Say(aPosicoes[POS_SAC2     ,1],aPosicoes[POS_SAC2     ,2],SA1->A1_NOME,oFonte1)
+	oPrint:Say(aPosicoes[POS_CNPJ2    ,1],aPosicoes[POS_CNPJ2    ,2],Iif(Len(AllTrim(SA1->A1_CGC)) <= 11,TransForm(SA1->A1_CGC,"@R 999.999.999-99"),TransForm(SA1->A1_CGC,"@R 99.999.999/9999-99")),oFonte1)
+	oPrint:Say(aPosicoes[POS_END2     ,1],aPosicoes[POS_END2     ,2],AllTrim(SA1->A1_END) + " - " + AllTrim(SA1->A1_BAIRRO) + " CEP: " + TransForm(SA1->A1_CEP,"@R 99999-999") + " - " + AllTrim(SA1->A1_MUN) + " - " + SA1->A1_EST,oFonte1)
+	
+	//MSBAR("INT25",15.0,1,cCodigoBarras,oPrint,.F.,Nil,Nil,0.025,1.3,Nil,Nil,"A",.F.)  // Codigo de Barras Retirado Pedido Cliente
+	MSBAR("INT25",26.0,1,cCodigoBarras,oPrint,.F.,Nil,Nil,0.025,1.3,.T.,Nil,"A",.F.)
+	
+	//Salva a imagem para envio do email
+	If nTipo == 2
+		oPrint:EndPage()
+		oPrint:Preview()
+		
+		AAdd(aAnexos,{	"\BOLETOS_EMAIL\"+AllTrim(cNomeArq)+".pdf",;
+		AllTrim(Lower(cDestEmail)),;
+		cNomeArq,;
+		aValores[1],;
+		cLinhaDigitavel,;
+		.F.,;
+		SE1->(RecNo()) })
+	EndIf
+	
+	TMP_BOL->(dbSkip())
+Enddo
+
+//Exibe os boletos em tela
+If nTipo == 1
+	oPrint:Preview()
+	//Manda os boletos por email
+Else
+	ProcRegua(Len(aAnexos))
+	For nI := 1 To Len(aAnexos)
+		IncProc("Enviando E-Mails...")
+		cMsg          := RetHTML(aAnexos,nI)
+		lSendMail	  := U_MFIN001(AllTrim(aAnexos[nI,2]),"Boleto bancario para pagamento",cMsg,{aAnexos[nI,1]},.F.,.F.,.T.,.F.,"",)
+		aAnexos[nI,6] := lSendMail
+		
+		//Flega o titulo como ja enviado por email
+		/*
+		If lSendMail
+		SE1->(dbGoTo(aAnexos[nI,7]))
+		SE1->(RecLock("SE1",.F.))
+		SE1->E1_XENVBOL := 'S'
+		SE1->(MsUnlock())
+		EndIf
+		*/
+	Next nI
+	
+	//Monta tela de resumo dos envios de email
+	oDlgRes := TDialog():New(aCoord[7],000,aCoord[6]/1.5,aCoord[5]/1.5,OemToAnsi("LOG de Envio dos Boletos Por Email"),,,,,,,,oMainWnd,.T.)
+	oLisRes := TWBrowse():New(000,000,100,100,,{" ","ID T?ulo","E-Mail Destinat?io","Resultado Envio"},,oDlgRes,,,,,,,,,,,,.F.,,.T.,,.F.,,,)
+	oLisRes:Align := CONTROL_ALIGN_ALLCLIENT
+	oLisRes:SetArray(aAnexos)
+	oLisRes:bLine := {||{		Iif(aAnexos[oLisRes:nAt][6],LoadBitmap( GetResources(), "lbtick_ocean" ),LoadBitmap( GetResources(), "lbno_ocean" )),;
+	aAnexos[oLisRes:nAt][3],;
+	aAnexos[oLisRes:nAt][2],;
+	Iif(aAnexos[oLisRes:nAt][6],"Boleto enviado com sucesso.","Falha no envio do boleto.") }}
+	oDlgRes:Activate(,,,,,,{||EnchoiceBar(oDlgRes,{|| oDlgRes:End()},{|| oDlgRes:End()})})
+EndIf
+
+Return(Nil)
+
+/*
+???????????????????????????????????????
+???????????????????????????????????????
+???????????????????????????????????????
+??rograma  ?RFIN001B ?Autor ?Carlos Daniel      ?Data ? 00/00/00   ??
+???????????????????????????????????????
+??esc.     ?Funcao que retorna a "MOLDURA" do boleto.                  ??
+??         ?                                                           ??
+???????????????????????????????????????
+??so       ?RFIN001A()              ??
+???????????????????????????????????????
+???????????????????????????????????????
+???????????????????????????????????????
+*/
+Static Function RFIN001B(oPrint)
+
+Local aBitmap := ""       
+Local bBitmap := {"","\Bitmaps\nutratta.bmp"} 
+Local oFonte1 := TFont():New( "Arial",,14,,.T.,,,,.F.,.F.)
+Local oFonte2 := TFont():New("Arial",9,10,.T.,.T.,5,.T.,5,.T.,.F.)
+Local oFonte4 := TFont():New( "Arial",,10,,.F.,,,,.F.,.F.)
+Local oFonte5 := TFont():New( "Arial",,05,,.T.,,,,.F.,.F.)
+Local oFonte6 := TFont():New( "Arial",,05,,.F.,,,,.F.,.F.)
+
+DbSelectArea("SA6")        //Posiciona o SA6 (Bancos)
+DbSetOrder(1)
+If DbSeek(xFilial("SA6")+cCodBc1+cAgencia+cNumCta)	//SE1->E1_PORTADO+SE1->E1_AGEDEP+SE1->E1_CONTA) 
+	
+	If SA6->A6_COD =='001'   //BRASIL
+		aBitmap := {"","\Bitmaps\LogoBrasil.bmp"} 
+	ElseIf SA6->A6_COD =='341'   //ITAU
+		aBitmap := {"","\Bitmaps\Logoitau.bmp"} 
+	ElseIf  SA6->A6_COD = "237" // Bradesco
+		aBitmap := {"","\Bitmaps\LogoBradesco.bmp"}
+	ElseIf  SA6->A6_COD = "756" // Bancoob
+		aBitmap := {"","\Bitmaps\LogoBANCOOB.bmp"}
+	ElseIf  SA6->A6_COD = "356" // Banco Bancoob
+		aBitmap := {"","\Bitmaps\LogoBcoReal.bmp"}
+	ElseIf  SA6->A6_COD = "033" // Banco Santander
+		aBitmap := {"","\Bitmaps\LogoSantander.bmp"}
+	Endif
+Else 
+	Return
+EndIf
+
+oPrint:EndPage()
+oPrint:StartPage()
+
+oPrint:Say(080,070,AllTrim(SA6->A6_NOME),oFonte1)
+oPrint:Say(080,1900,"Comprovante de Entrega",oFonte2)
+oPrint:Box(150,050,350,2400)
+oPrint:Say(160,060,"BENEFICIARIO",oFonte6)
+aPosicoes[1] := {180,060}//Cooprata{210,060}
+
+oPrint:Line(150,1265,350,1265)
+oPrint:Say(160,1275,"AGENCIA  COBRADORA",oFonte6)
+aPosicoes[2] := {210,1275}
+
+oPrint:Say(260,1275,"DATA  DE  ENTREGA",oFonte6)
+aPosicoes[6] := {290,1275}
+
+oPrint:Line(150,1566,350,1566)
+oPrint:Say(160,1576,"Nosso N?ero",oFonte6)
+aPosicoes[3] := {210,1576}
+
+oPrint:Say(260,1576,"(=)VALOR  DO  DOCUMENTO",oFonte6)
+aPosicoes[7] := {290,1576}
+
+oPrint:Line(150,1957,350,1957)
+oPrint:Say(160,1967,"VENCIMENTO",oFonte6)
+aPosicoes[4] := {210,1967}
+
+oPrint:Say(260,1967,"NO DOCUMENTO",oFonte6)
+aPosicoes[70] := {290,1967}
+
+oPrint:Line(250,050,250,2400)
+oPrint:Say(260,060,"PAGADOR",oFonte6)
+aPosicoes[5] := {290,060}
+
+oPrint:Say(375,050,Replicate("- ",214),oFonte6)
+oPrint:Box(400,050,600,2400)
+oPrint:Say(410,060,"Data Recebimento",oFonte4)
+oPrint:Say(410,450,"Assinatura por extenso",oFonte4)
+oPrint:Say(410,1300,"Doc. Identidade",oFonte4)
+
+oPrint:Say(530,060,"______/______/______",oFonte4)
+oPrint:Say(530,450,"__________________________________________",oFonte4)
+oPrint:Say(530,1300,"________________________",oFonte4)
+
+oPrint:Say(622,050,Replicate("- ",214),oFonte6)
+
+
+//Desenha as 2 fichas de compensacao
+
+oPrint:SayBitmap(635,065,bBitmap[2],500,106)
+IF SA6->A6_COD =='001'
+	oPrint:Say(695,690,"001-9",oFonte1)
+ELSEIF SA6->A6_COD =='341'  
+	oPrint:Say(695,690,"341-7",oFonte1)
+ELSEIF SA6->A6_COD =='237' 
+	oPrint:Say(695,690,"237-2",oFonte1)
+ELSEIF SA6->A6_COD =='756'
+	oPrint:Say(695,690,"756-0",oFonte1)
+ELSEIF SA6->A6_COD =='033'
+	oPrint:Say(695,690,"033-7",oFonte1)
+ELSE
+	oPrint:Say(695,690,"VER FONT",oFonte1)
+END
+aPosicoes[8] := {695,875}
+oPrint:Line(700,675,750,675)
+oPrint:Line(700,850,750,850)
+oPrint:Box(750,050,1700,2400)   //oPrint:Box(750,050,1700,2500)
+oPrint:Say(760,060,"Local de Pagamento",oFonte6)
+aPosicoes[9] := {790,060}
+
+oPrint:Line(836,050,836,2400)         //oPrint:Line(836,050,836,2500)
+oPrint:Say(846,060,"Pagador",oFonte6)
+aPosicoes[11] := {876,060}
+
+oPrint:Line(922,050,922,2400)   //oPrint:Line(922,050,922,2500)
+oPrint:Say(932,060,"Data do Documento",oFonte6)
+aPosicoes[13] := {962,060}
+oPrint:Say(932,429,"No. Documento",oFonte6)
+aPosicoes[14] := {962,429}
+oPrint:Say(932,798,"Especie do Doc.",oFonte6)
+aPosicoes[15] := {962,798}
+oPrint:Say(932,1117,"Aceite",oFonte6)
+aPosicoes[16] := {962,1117}
+oPrint:Say(932,1436,"Data do Processamento",oFonte6)
+aPosicoes[17] := {962,1436}
+
+oPrint:Line(1008,050,1008,2400)  //oPrint:Line(1008,050,1008,2500)
+oPrint:Say(1018,060,"Uso do Banco",oFonte6)
+aPosicoes[62] := {1048,060}
+oPrint:Say(1018,429,"Carteira",oFonte6)
+aPosicoes[19] := {1048,429}
+oPrint:Say(1018,798,"Esp?ie",oFonte6)
+aPosicoes[20] := {1048,798}
+oPrint:Say(1018,1117,"Quantidade",oFonte6)
+oPrint:Say(1018,1436,"Valor",oFonte6)
+aPosicoes[21] := {1048,1436}
+
+oPrint:Line(922,419,1008,419)
+oPrint:Line(922,788,1008,788)
+oPrint:Line(922,1107,1008,1107)
+oPrint:Line(922,1426,1008,1426)
+
+oPrint:Line(1094,050,1094,2400)  //oPrint:Line(1094,050,1094,2500)
+oPrint:Say(1104,060,"Instrucoes",oFonte6)
+
+aPosicoes[23] := {1134,060}
+aPosicoes[24] := {1164,060}
+aPosicoes[25] := {1194,060}
+aPosicoes[26] := {1224,060}
+aPosicoes[27] := {1254,060}
+aPosicoes[28] := {1284,060}
+aPosicoes[29] := {1314,060}
+aPosicoes[30] := {1344,060}
+aPosicoes[71] := {1374,060}
+
+oPrint:Line(1008,419,1094,419)
+oPrint:Line(1008,788,1094,788)
+oPrint:Line(1008,1107,1094,1107)
+oPrint:Line(1008,1426,1094,1426)
+
+oPrint:Line(750,1837,1528,1837)
+oPrint:Line(1528,050,1528,2400)   //oPrint:Line(1528,050,1528,2500)
+
+oPrint:Say(1538,060,"Beneficiario",oFonte6)
+aPosicoes[31] := {1568,060}
+aPosicoes[34] := {1598,060}
+
+oPrint:Say(1538,1000,"C.N.P.J./C.P.F.:",oFonte6)
+aPosicoes[32] := {1568,1000}
+
+oPrint:Say(1538,1847,"C.E.I.:",oFonte6)
+aPosicoes[33] := {1568,1847}
+
+//oPrint:Say(1670,060,"Sacador/Avalista:",oFonte6)
+aPosicoes[66] := {1670,150}
+oPrint:Say(1670,1070,"Autentica?o Mec?ica / Ficha de Compensa?o",oFonte6)
+oPrint:Say(1710,1910,"RECIBO  DO  PAGADOR",oFonte2)
+
+oPrint:Say(760,1847,"Vencimento",oFonte6)
+aPosicoes[10] := {785,2390}
+
+oPrint:Say(846,1847,"Ag?cia/C?igo do Benefici?io",oFonte6)
+aPosicoes[12] := {876,2390}
+
+oPrint:Say(936,1847,"Nosso N?ero",oFonte6)
+aPosicoes[18] := {966,2390}
+
+oPrint:Say(1018,1847,"(=)Valor Documento",oFonte6)  //oPrint:Say(1006,1847,"(=)Valor Documento",oFonte6)
+aPosicoes[22] := {1034,2390}  //aPosicoes[22] := {1036,1847}
+
+oPrint:Say(1096,1847,"(-)Desconto/Abatimento",oFonte6)
+oPrint:Line(1176,1837,1176,2400)  //oPrint:Line(1176,1837,1176,2500)
+oPrint:Say(1186,1847,"(-)Outras Dedu?es",oFonte6)
+oPrint:Line(1266,1837,1266,2400)  //oPrint:Line(1266,1837,1266,2500)
+oPrint:Say(1276,1847,"(+)Mora/Multa",oFonte6)
+oPrint:Line(1356,1837,1356,2400)  //oPrint:Line(1356,1837,1356,2500)
+oPrint:Say(1366,1847,"(+)Outros Acr?cimos",oFonte6)
+oPrint:Line(1446,1837,1446,2400)  //oPrint:Line(1446,1837,1446,2500)
+oPrint:Say(1456,1847,"(=)Valor Cobrado",oFonte6)
+
+oPrint:Say(1900,050,Replicate("- ",214),oFonte6)
+
+//2a. ficha de compensacao
+
+oPrint:SayBitmap(1925,065,aBitMap[2],500,106)
+//oPrint:Say(1970,065,AllTrim(SEE->EE_C_NOMBC),oFonte1)
+IF SA6->A6_COD =='001'
+	oPrint:Say(1970,690,"001-9",oFonte1)
+ELSEIF SA6->A6_COD =='341'  
+	oPrint:Say(1970,690,"341-7",oFonte1)
+ELSEIF SA6->A6_COD =='237' 
+	oPrint:Say(1970,690,"237-2",oFonte1)
+ELSEIF SA6->A6_COD =='756'
+	oPrint:Say(1970,690,"756-0",oFonte1) 
+ELSEIF SA6->A6_COD =='033'
+	oPrint:Say(1970,690,"033-7",oFonte1)	
+ELSE
+	oPrint:Say(1970,690,"VER FONT",oFonte1)
+END      
+
+
+aPosicoes[35] := {1970,875}
+oPrint:Line(1975,675,2025,675)
+oPrint:Line(1975,850,2025,850)
+oPrint:Box(2025,050,2975,2400)  //oPrint:Box(2025,050,2975,2500)
+
+oPrint:Say(2035,060,"Local de Pagamento",oFonte6)
+aPosicoes[36] := {2065,060}
+
+oPrint:Line(2121,050,2121,2400)    //oPrint:Line(2121,050,2121,2500)
+oPrint:Say(2131,060,"Benefici?io",oFonte6)
+aPosicoes[38] := {2161,060}
+
+oPrint:Line(2207,050,2207,2400)  //oPrint:Line(2207,050,2207,2500)
+oPrint:Say(2217,060,"Data do Documento",oFonte6)
+aPosicoes[40] := {2247,060}
+oPrint:Say(2217,429,"No. Documento",oFonte6)
+aPosicoes[41] := {2247,429}
+oPrint:Say(2217,798,"Esp?ie do Doc.",oFonte6)
+aPosicoes[42] := {2247,798}
+oPrint:Say(2217,1117,"Aceite",oFonte6)
+aPosicoes[43] := {2247,1117}
+oPrint:Say(2217,1436,"Data do Processamento",oFonte6)
+aPosicoes[44] := {2247,1436}
+
+oPrint:Line(2303,050,2303,2400)  //oPrint:Line(2303,050,2303,2500)
+oPrint:Say(2313,060,"Uso do Banco",oFonte6)
+aPosicoes[63] := {2343,060}
+
+oPrint:Say(2313,429,"Carteira",oFonte6)
+aPosicoes[46] := {2343,429}
+oPrint:Say(2313,798,"Esp?ie",oFonte6)
+aPosicoes[47] := {2343,798}
+oPrint:Say(2313,1117,"Quantidade",oFonte6)
+oPrint:Say(2313,1436,"Valor",oFonte6)
+aPosicoes[48] := {2343,1436}
+
+oPrint:Line(2207,419,2379,419)
+oPrint:Line(2207,788,2379,788)
+oPrint:Line(2207,1107,2379,1107)
+oPrint:Line(2207,1426,2379,1426)
+
+oPrint:Line(2383,050,2383,2400)
+oPrint:Say(2389,060,"Instru?es",oFonte6)
+
+//aPosicoes[50] := {2419,060}
+//aPosicoes[51] := {2449,060}
+aPosicoes[52] := {2449,060}
+aPosicoes[53] := {2479,060}
+aPosicoes[54] := {2509,060}
+aPosicoes[55] := {2539,060}
+aPosicoes[56] := {2569,060}
+aPosicoes[57] := {2599,060}
+aPosicoes[68] := {2629,060}
+aPosicoes[69] := {2659,060}
+
+oPrint:Line(2025,1837,2810,1837)
+oPrint:Line(2810,050,2810,2400)
+
+oPrint:Say(2813,060,"Pagador",oFonte6)
+aPosicoes[58] := {2843,060}
+aPosicoes[61] := {2883,060}
+
+oPrint:Say(2813,1000,"C.N.P.J./C.P.F.:",oFonte6)
+aPosicoes[59] := {2843,1000}
+
+oPrint:Say(2813,1847,"C.E.I.:",oFonte6)
+aPosicoes[60] := {2843,1847}
+
+IF SA6->A6_COD =='001'
+	oPrint:Say(2950,060,"Sacador/Avalista:",oFonte6)
+ELSE                                                
+	oPrint:Say(2950,060,"Pagador/Avalista:",oFonte6)
+ENDIF
+aPosicoes[67] := {2980,220}
+oPrint:Say(2950,1070,"Autentica?o Mec?ica / Ficha de Compensa?o",oFonte6)
+
+oPrint:Say(2035,1847,"Vencimento",oFonte6)
+aPosicoes[37] := {2065,2390}
+
+oPrint:Say(2123,1847,"Ag?cia/C?igo do Benefici?io",oFonte6)
+aPosicoes[39] := {2153,2390}
+
+oPrint:Say(2217,1847,"Nosso N?ero",oFonte6)
+aPosicoes[45] := {2247,2390}
+
+oPrint:Say(2314,1847,"(=)Valor Documento",oFonte6)
+aPosicoes[49] := {2330,2390}
+
+oPrint:Say(2384,1847,"(-)Desconto/Abatimento",oFonte6)
+oPrint:Line(2455,1837,2455,2400)  //oPrint:Line(2455,1837,2455,2500)
+oPrint:Say(2465,1847,"(-)Outras Dedu?es",oFonte6)
+oPrint:Line(2541,1837,2541,2400)  //oPrint:Line(2541,1837,2541,2500)
+oPrint:Say(2551,1847,"(+)Mora/Multa",oFonte6)
+oPrint:Line(2627,1837,2627,2400)  //oPrint:Line(2627,1837,2627,2500)
+oPrint:Say(2637,1847,"(+)Outros Acr?cimos",oFonte6)
+oPrint:Line(2713,1837,2713,2400)  //oPrint:Line(2713,1837,2713,2500)
+oPrint:Say(2723,1847,"(=)Valor Cobrado",oFonte6)
+
+Return(Nil)
+
+/*
+???????????????????????????????????????
+???????????????????????????????????????
+???????????????????????????????????????
+??rograma  ?RetHTML    Autor ?Carlos Daniel      ?Data ? 00/00/00   ??
+???????????????????????????????????????
+??esc.     ?Funcao que retorna o HTML do boleto a ser enviado por      ??
+??         ?email.                                                     ??
+???????????????????????????????????????
+??so       ?RFIN001A()                                                 ??
+???????????????????????????????????????
+???????????????????????????????????????
+???????????????????????????????????????
+*/
+Static Function RetHTML(aBoleto,nLinha)
+
+Local cRetorno := ""
+
+cRetorno := '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">'
+cRetorno += '<html xmlns="http://www.w3.org/1999/xhtml">'
+cRetorno += '<head>'
+cRetorno += '<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />'
+cRetorno += '<title>Boleto Bancario</title>'
+cRetorno += '<style type="text/css">'
+cRetorno += '<!--'
+cRetorno += '.a {'
+cRetorno += '	font-family: Arial, Helvetica, sans-serif;'
+cRetorno += '}'
+cRetorno += '-->'
+cRetorno += '</style>'
+cRetorno += '</head>'
+cRetorno += '<body class="a">'
+cRetorno += '<p>Prezado cliente,</p>'
+cRetorno += '<p>'
+cRetorno += '<span style="font-weight: bold">Anexo o boleto bancario referente a cobranca ' + UpPer(AllTrim(aBoleto[nLinha,3])) + ', com vencimento em ' + DtoC(aBoleto[nLinha,4]) + '.</span><br>'
+cRetorno += 'Caso nao consiga visualizar o boleto anexo, segue a linha digitavel para pagamento eletronico:<br>'
+cRetorno += '<span style="font-weight: bold">' + aBoleto[nLinha,5] + '</span>'
+cRetorno += '</p>'
+cRetorno += '<p>Para atualizar seu email, favor contatar-nos atraves: <a href="mailto: adm@email.com.br">adm@email.com.br</a><br>'
+cRetorno += 'Qualquer duvida, estamos a disposicao pelo <a href="mailto: faleconosco@email.com.br">faleconosco@email.com.br</a></p>'
+cRetorno += '</body>'
+cRetorno += '</html>'
+
+Return(cRetorno)
+
+/*
+???????????????????????????????????????
+???????????????????????????????????????
+???????????????????????????????????????
+??rograma  ?CriaSX1  ?Autor ?Carlos Daniel      ?Data ? 00/00/00   ??
+???????????????????????????????????????
+??esc.     ?Cria as perguntas (Parametros) do Boleto caso nao existam. ??
+??         ?                                                           ??
+???????????????????????????????????????
+??so       ?Funcao Principal                                           ??
+???????????????????????????????????????
+???????????????????????????????????????
+???????????????????????????????????????
+*/
+Static Function CriaSX1()
+
+//Grupo de Perguntas
+aHelpPor := {}
+Aadd( aHelpPor, 'N?ero do bordero Inicial               ')
+PutSx1(cPerg,"01","Do Bordero"		,"Do Bordero"		,"Do Bordero"		,"mv_ch1","C",06,0,1,"G","","","","","mv_par01","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+aHelpPor := {}
+Aadd( aHelpPor, 'N?ero do bordero Final                 ')
+PutSx1(cPerg,"02","Ate o Bordero"	,"Ate o Bordero"	,"Ate o Bordero"	,"mv_ch2","C",06,0,1,"G","","","","","mv_par02","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+aHelpPor := {}
+Aadd( aHelpPor, 'C?igo do Cliente Inicial               ')
+PutSx1(cPerg,"03","Do Cliente"   	,"Do Cliente"   	,"Do Cliente"   	,"mv_ch3","C",06,0,1,"G","","SA1","","","mv_par03","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+aHelpPor := {}
+Aadd( aHelpPor, 'C?igo do Cliente Final                 ')
+PutSx1(cPerg,"04","Ate Cliente"   	,"Ate Cliente"   	,"Ate Cliente"   	,"mv_ch4","C",06,0,1,"G","","SA1","","","mv_par04","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+aHelpPor := {}
+Aadd( aHelpPor, 'Loja do Cliente Inicial                 ')
+PutSx1(cPerg,"05","Da Loja"	   	,"Da Loja"	   			,"Da Loja"	   		,"mv_ch5","C",04,0,1,"G","","","","","mv_par05","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+aHelpPor := {}
+Aadd( aHelpPor, 'Loja do Cliente Final                   ')
+PutSx1(cPerg,"06","Ate Loja"	   	,"Ate Loja"	   		,"Ate Loja"	   		,"mv_ch6","C",04,0,1,"G","","","","","mv_par06","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+aHelpPor := {}
+Aadd( aHelpPor, 'N?ero do T?ulo Inicial                ')
+PutSx1(cPerg,"07","Do T?ulo"	   	,"Do T?ulo"   		,"Do T?ulo"   	   	,"mv_ch7","C",09,0,1,"G","","","","","mv_par07","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+aHelpPor := {}
+Aadd( aHelpPor, 'N?ero do T?ulo Final                  ')
+PutSx1(cPerg,"08","Ate T?ulo"  	,"Ate T?ulo"  		,"Ate T?ulo"  		,"mv_ch08","C",09,0,1,"G","","","","","mv_par08","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+aHelpPor := {}
+Aadd( aHelpPor, 'Mensagem para o Cliente           		 ')
+PutSx1(cPerg,"09","MSG Cliente 1"	,"MSG Cliente 1"	,"MSG Cliente 1"	,"mv_ch9","C",50,0,1,"G","","","","","mv_par09","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+aHelpPor := {}
+Aadd( aHelpPor, 'Mensagem para o Cliente           		 ')
+PutSx1(cPerg,"10","MSG Cliente 2"    ,"MSG Cliente 2" ,"MSG Cliente 2"		,"mv_ch10","C",50,0,1,"G","","","","","mv_par10","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+aHelpPor := {}
+Aadd( aHelpPor, 'Mensagem para o Boleto            		 ')
+PutSx1(cPerg,"11","MSG Boleto 1   ","MSG Boleto 1   ","MSG Boleto  1  "		,"mv_ch11","C",50,0,1,"G","","","","","mv_par11","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+aHelpPor := {}
+Aadd( aHelpPor, 'Mensagem para o Boleto            		 ')
+PutSx1(cPerg,"12","MSG Boleto 2   ","MSG Boleto 2   ","MSG Boleto  2  "		,"mv_ch12","C",50,0,1,"G","","","","","mv_par12","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+
+aHelpPor := {}
+Aadd( aHelpPor, "Qual a data de emissao inicial?")
+PutSx1(cPerg,"13","Da Emissao?"," "," ","mv_chd","D",8,0,0,"G","","","","","MV_PAR13","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+
+aHelpPor := {}
+Aadd( aHelpPor, "Qual a data de emissao final")
+PutSx1(cPerg,"14","Ate Emissao?"," "," ","mv_che","D",8,0,0,"G","","","","","MV_PAR14","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+
+aHelpPor := {}
+Aadd( aHelpPor, "Qual a data de vencimento inicial?")
+PutSx1(cPerg,"15","Do Vencimento?"," "," ","mv_chf","D",8,0,0,"G","","","","","MV_PAR15","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+
+aHelpPor := {}
+Aadd( aHelpPor, "Qual a data de emissao final")
+PutSx1(cPerg,"16","Ate Vencimento?"," "," ","mv_chg","D",8,0,0,"G","","","","","MV_PAR16","","","","","","","","","","","","","","","","",aHelpPor,aHelpPor,aHelpPor)
+
+//PutSX1([cGrupo][cOrdem][cPergunt][cPerSpa][cPerEng][cVar][cTipo][nTamanho][nDecimal][ nPresel][cGSC][cValid] [ cF3 ] [ cGrpSxg ] [ cPyme ] [ cVar01 ] [ cDef01 ] [ cDefSpa1 ] [ cDefEng1 ] [ cCnt01 ] [ cDef02 ] [ cDefSpa2 ] [ cDefEng2 ] [ cDef03 ] [ cDefSpa3 ] [ cDefEng3 ] [ cDef04 ] [ cDefSpa4 ] [ cDefEng4 ] [ cDef05 ] [ cDefSpa5 ] [ cDefEng5 ] [ aHelpPor ] [ aHelpEng ] [ aHelpSpa ] [ cHelp ] )
+*/
+Return()
+
+/*
+???????????????????????????????????????
+???????????????????????????????????????
+???????????????????????????????????????
+??rograma  ?VlrCnab  ?Autor ?Carlos Daniel      ?Data ? 00/00/00   ??
+???????????????????????????????????????
+??esc.     ?Retorna o valor do titulo considerando os abatimentos e    ??
+??         ?acrescimos.                                                ??
+??         ?Retorna o valor do juros por dia de atraso.                ??
+??         ?                                                           ??
+???????????????????????????????????????
+??so       ?Cnab Bco. Brasil de remessa de contas a receber - Modelo 1 ??
+???????????????????????????????????????
+???????????????????????????????????????
+???????????????????????????????????????
+*/
+User Function VlrCnab(nTipo)
+
+Local nAbatim  := 0
+Local nAcresc  := 0
+Local nDecres  := 0
+Local nSaldo   := 0
+Local nRet	   := 0
+Local nVlTotal := 0
+Local nTxJur   := GetNewPar("CP_TXJUR",0.003)  // Parametro para calculo do valor dos juros diarios.
+
+//Verifica o valor do titulo
+If nTipo == 1  //se for impresso
+	nAbatim  := SomaAbat(SE1->E1_PREFIXO,SE1->E1_NUM,SE1->E1_PARCELA,"R",1,,SE1->E1_CLIENTE,SE1->E1_LOJA)
+	nAcresc  := SE1->E1_ACRESC
+	nDecres  := SE1->E1_DECRESC
+	nSaldo   := SE1->E1_SALDO
+	nRet	 := nSaldo + nAcresc - nDecres - nAbatim
+Else//Verifica o valor dos juros por dia de atraso
+	nAbatim  := SomaAbat(SE1->E1_PREFIXO,SE1->E1_NUM,SE1->E1_PARCELA,"R",1,,SE1->E1_CLIENTE,SE1->E1_LOJA)
+	nAcresc  := SE1->E1_ACRESC
+	nDecres  := SE1->E1_DECRESC
+	nSaldo   := SE1->E1_SALDO
+	nRet	 := nSaldo + nAcresc - nDecres - nAbatim
+	nRet	 := Round(nRet * nTxJur,2)
+EndIf
+
+Return(nRet)
+
+/*
+???????????????????????????????????????
+???????????????????????????????????????
+???????????????????????????????????????
+??rograma  ?Modulo10 ?Autor ?Carlos Daniel      ?Data ? 00/00/00   ??
+???????????????????????????????????????
+??esc.     ?Funcao que retorna o digito conforme regra do modulo 10.   ??
+??         ?                                                           ??
+???????????????????????????????????????
+??so       ?Funcao Principal                                           ??
+???????????????????????????????????????
+???????????????????????????????????????
+???????????????????????????????????????
+*/
+User Function Modulo10(cData)
+
+Local lB := .T.
+Local nP := 0
+Local nD := 0          // Digito verificador
+Local nL := Len(cData) // Tamanho de bytes do caracter
+
+While nL > 0
+	nP := Val(SubStr(cData, nL, 1))
+	If (lB)
+		nP := nP * 2
+		If nP > 9
+			nP := nP - 9
+		EndIf
+	EndIf
+	nD := nD + nP
+	nL := nL - 1
+	lB := !lB
+EndDo
+
+nD := 10 - (Mod(nD,10))
+
+If nD = 10
+	nD := 0
+EndIf
+
+Return(nD)
+
+/*
+???????????????????????????????????????
+???????????????????????????????????????
+???????????????????????????????????????
+??rograma  ?Modulo11 ?Autor ?Carlos Daniel      ?Data ? 00/00/00   ??
+???????????????????????????????????????
+??esc.     ?Funcao que retorna o digito conforme regra do modulo 11.   ??
+??         ?                                                           ??
+???????????????????????????????????????
+??so       ?Funcao Principal                                           ??
+???????????????????????????????????????
+???????????????????????????????????????
+???????????????????????????????????????
+*/
+User Function Modulo11(cData,nBaseDv,nBase,cBanc,cTipo)
+Local L := 0
+Local D := 0
+Local E := 0
+Local P := 0
+Local cBanc := SEE->EE_CODIGO
+If cBanc == "001" .AND. nBaseDv == 2  //Banco do brasil
+	L := Len(cData)
+	D := 0
+	P := 1
+	While L > 0
+		P := P + 1
+		D := D + (Val(SubStr(cData, L, 1)) * P)
+		If P = 9
+			P := 1
+		EndIf
+		L := L - 1
+	EndDo
+	D := 11 - mod(D,11)
+	
+	If Len(ALLTRIM(cdata)) > 17 //Se for calculo do digito verificador do codigo de barras.
+		D := If(D = 0 .OR. D = 10 .OR. D = 11,1,AllTrim(Str(D)))
+	Else
+		D := If(D = 10 ,"X",AllTrim(Str(D)))
+	EndIf
+	
+	D := Iif(Valtype(D)=="N",AllTrim(Str(D)),AllTrim(D))   
+
+ELSEIf cBanc == "001" .AND. nBaseDv == 9  //Banco do brasil
+	L := Len(cData)
+	D := 0
+	P := 10
+	While L > 0
+		P := P - 1
+		D := D + (Val(SubStr(cData, L, 1)) * P)
+		If P = 2
+			P := 10
+		EndIf
+		L := L - 1
+	EndDo
+	D := mod(D,11)
+	
+	D := If(D = 10 ,"X",AllTrim(Str(D)))
+	
+	D := Iif(Valtype(D)=="N",AllTrim(Str(D)),AllTrim(D))
+	
+ElseIf cBanc == "237"//Bradesco
+	L := Len(cData)
+	E := 0
+	P := 1
+	nBaseDv := Iif(L > 13,9,7)
+	While L > 0
+		P := P + 1
+		E := E + (Val(SubStr(cData, L, 1)) * P)
+		If P = nBaseDv
+			P := 1
+		EndIf
+		L := L - 1
+	EndDo
+	
+	E := 11 - (mod(E,11))
+	
+	If Len(AllTrim(cData)) > 17 // se for calculo do digito verificador do c?igo de barras.
+		E := Iif(E = 0 .OR. E = 1 .OR. E > 9,1,E)
+	Else   // Caso contrario sera considerado o calculo do digito verificador do Nosso Numero.
+		If (E == 10)
+			E := "P"
+		ElseIf (E == 11)
+			E:= 0
+		EndIf
+	EndIf
+	
+	D := Iif(Valtype(E)=="N",AllTrim(Str(E)),AllTrim(E))
+
+ElseIf cBanc == "756"
+	D := 0
+	IF cTipo == "N"
+		D := 0
+		P := 0
+		aConst	:= {3,1,9,7}
+		FOR L := 1 TO Len(cdata)
+   			P := P + 1
+	   		D := D + (Val(SubStr(cData, L, 1)) * aConst[P])
+			If P = 4
+				P := 0
+	   		End
+   		NEXT
+		nRest	:= mod(D,11)
+		if nRest == 0 .OR. nRest == 1
+			D	:= 0
+		ELSE
+			D := 11 - nRest //(mod(D,11))
+		ENDIF
+	ELSEIF cTipo == "C"
+		L := Len(cdata)
+		D := 0
+		P := 1
+		While L > 0
+   			P := P + 1
+	   		D := D + (Val(SubStr(cData, L, 1)) * P)
+			If P = 9
+				P := 1
+	   		End
+   			L := L - 1
+		End
+		D := 11 - (mod(D,11))
+		If (D == 0 .Or. D == 1 .Or. D == 10 .Or. D == 11)
+			D := 1
+		End
+	ENDIF
+Return(D)
+ElseIf cBanc == "341"       //itau    CARLOS DANIEL
+	L := Len(cdata)
+	D := 0
+	P := 1
+// Some o resultado de cada produto efetuado e determine o total como (D);
+	While L > 0
+   		P := P + 1
+   		D := D + (Val(SubStr(cData, L, 1)) * P)
+   		If P = 9
+			P := 1
+   		End
+   	   	L := L - 1
+	End
+// DAC = 11 - Mod 11(D)
+	D := 11 - (mod(D,11))
+// OBS: Se o resultado desta for igual a 0, 1, 10 ou 11, considere DAC = 1.
+	If (D == 0 .Or. D == 1 .Or. D == 10 .Or. D == 11)
+		D := 1
+	End
+ElseIf cBanc == "399" 
+	L := Len(cdata)
+	D := 0
+	P := 1
+	While L > 0
+		P :=  P + 1
+		D := D + (Val(Subs(cData, L, 1)) * P)
+		If P = nBase
+			P := 1
+		End
+		L := L - 1
+	End            
+	//altera?o Vin?ius - Motivo adequa?o ao layout do banco HSBC
+	D := 11 - (mod(D,11))
+                
+	IF cTipo == "N"
+		If (D == 0 .Or. D == 10 .Or. D == 11)
+			D := 0                        
+		elseif D == 1
+			D := 1
+		End
+	elseif cTipo == "B"
+		If (D == 0 .Or. D == 1 .Or. D == 10) 
+			D := 1
+   		End       
+	elseif cTipo == "C"
+		If D == 11
+			D := 1
+	   	elseif D == 10
+			D := 0
+		End       	
+	elseif cTipo == "I"
+		If D == 10 
+			D := "P"
+		ELSEIF D == 11
+			D := "0"
+		ELSE
+			D:= STR(D)
+		End 	
+	endif
+/*
+ElseIf cBanc == "033" //Santander
+	L := Len(cdata)           
+   	D := 0
+   	P := 1
+   	While L > 0
+   		P := P + 1
+   	   	D := D + (Val(SubStr(cData, L, 1)) * P)
+ 		If P = 9
+	  		P := 1
+		End
+   		L := L - 1
+	End
+	D := 11 - (mod(D,11))
+   		If (D == 0 .Or. D == 1 .Or. D == 10 .Or. D == 11)
+   	  		D := 1
+	End	 
+*/
+//Static Function Modulo11(cData) //ADD CARLOS 
+ElseIf cBanc == "033" //Santander
+	L := Len(cdata)
+	D := 0
+	P := 1
+		While L > 0
+  			P := P + 1
+  			D := D + (Val(SubStr(cData, L, 1)) * P)
+  		If P = 9
+	   		P := 1
+	End
+  		L := L - 1
+End
+//D := 11 - (mod(D,11))
+	nInt := Int(D/11)
+	nRes := Abs((nInt * 11) - D)
+If nRes == 10
+	nDig := 1
+ElseIf nRes == 1 .OR. nRes == 0
+	nDig := 0
+Else
+	nDig := Abs(nRes - 11)
+EndIf
+
+/*
+If (D == 0 .Or. D == 1 .Or. D == 10 .Or. D == 11)
+	D := 1
+End
+*/
+
+Return(nDig)			
+Else  // Se n? mostra esse
+	L := Len(cdata)
+	D := 0
+	P := 1
+	While L > 0
+		P := P + 1
+		D := D + (Val(SubStr(cData, L, 1)) * P)
+		If P = 9
+			P := 1
+		End
+		L := L - 1
+	End
+    D := 10 - (mod(D,10))
+	If (D == 10 .Or. D == 11)
+		D := 1
+	End
+	D := AllTrim(Str(D))
+Endif
+Return(D)
+
+/*
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+??rograma  ?   CB001     ?utor ?Carlos Daniel      ?Data ? 00/00/00    ??
+?????????????????????????????????????????
+??esc.     ?Retorna a expressao da representacao do cod barras - BCO BRASIL??
+??         ?para convenio com 7 posicoes.                                  ??
+??         ?                                                               ??
+??         ?Verificar se o campo EE_FAXATU tem a quantidade de digitos     ??
+??         ?adequada. No caso do BRASIL deve ser 10 digitos,               ??
+??         ?Exemplo: EE_FAXATU = "0000000001"                              ??
+??         ?                                                               ??
+?????????????????????????????????????????
+??so       ?Chamado no campo EE_C_CODBA                                    ??
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+*/
+User Function CB001()  //BRASIL
+
+Local cRetorno   	:= "" 
+Local cAgencia	 	:= SEE->EE_AGENCIA 
+Local cConta 	 	:= AllTrim(SEE->EE_CONTA)
+Local cFatVencto 	:= AllTrim(Str(1000 + (aValores[1] - CToD("03/07/2000"))))
+Local nTamFaxa   	:= 5 // Tamanho do sequencial informado no campo EE_FAXATU
+Local nBaseM11   	:= 9  // Base de calculo da funcao U_Modulo11()
+Local cCarteira  	:= AllTrim(SEE->EE_CODCART)
+Local cMoed      	:= "9"
+Local cConvenio  	:= AllTrim(SEE->EE_CODEMP)
+Local cSequencial	:= StrZero(Val(ALLTRIM(SEE->EE_FAXATU))+1,nTamFaxa)
+Private cNNumImp 
+Private cNNumImp1
+Private cBanc
+
+While !MayIUseCode(cSequencial)
+	cSequencial := StrZero(Val(cSequencial)+1,nTamFaxa)
+ENDDO      
+
+cNNumImp := cConvenio + cSequencial
+cNNumImp1 := cConvenio + cSequencial + U_Modulo11( cConvenio+cSequencial,9) 
+cBanc := "001"      
+
+dbSelectArea("SEE")
+SEE->(dbSetOrder(1))
+
+If !SEE->(dbSeek(xFilial("SEE")+SEA->EA_PORTADO+SEA->EA_AGEDEP+SEA->EA_NUMCON ))
+	Return("")
+Else           
+	IF SEE->EE_FAXATU < cSequencial 
+		SEE->(RecLock("SEE",.F.))
+   		SEE->EE_FAXATU := cSequencial
+		SEE->(MsUnLock())
+	ENDIF
+EndIf
+        
+//Se o convenio tem 07 posicoes
+//nao tem digito no nosso nro e fica com 10 posicoes.
+//Caso contrario o nosso nro tem digito e fica com 11 posicoes.     
+//IF Empty(SE1->E1_NUMBCO)	
+	If Len(AllTrim(cConvenio)) == 7
+		//Atualiza o NUMBCO (nosso numero)
+	   	SE1->(RecLock("SE1",.F.))
+	 	SE1->E1_NUMBCO := cNNumImp
+		SE1->(MsUnlock())
+	Else
+		//Atualiza o NUMBCO (nosso numero)
+		SE1->(RecLock("SE1",.F.))
+	   	SE1->E1_NUMBCO := cNNumImp1
+		SE1->(MsUnlock())
+	EndIf
+//ELSE
+//	cNNumImp := SE1->E1_NUMBCO
+	
+//ENDIF
+
+//O codigo de barras possui 44 posicoes no total,
+//sendo as primeiras 19 posicoes:
+cRetorno := cBanc //01 a 03 TAM 03 - Codigo do banco
+cRetorno += cMoed //04 a 04 TAM 01 - Codigo da Moeda (Real = 9, Outras=0)
+cRetorno += AllTrim(U_Modulo11(cBanc+cMoed+cFatVencto+StrZero(aValores[2]*100,10)+cNNumImp+StrZero(Val(SUBSTR(cAgencia,1,LEN(ALLTRIM(cAgencia))-1)),4)+StrZero(Val(SUBSTR(cConta,1,LEN(ALLTRIM(cConta))-1)),8)+cCarteira,2))  //Digito do codigo de barra 
+//cRetorno += AllTrim(U_Modulo11(cBanc+cMoed+cFatVencto+StrZero(aValores[2]*100,10)+STRZERO(0,6)+Alltrim(cNNumImp)+cCarteira))
+//cNNumImp+StrZero(Val(SUBSTR(cAgencia,1,LEN(ALLTRIM(cAgencia))-1)),4)+StrZero(Val(SUBSTR(cConta,1,LEN(ALLTRIM(cConta))-1)),8)+cCarteira))  //Digito do codigo de barra 
+cRetorno += cFatVencto //06 a 09 TAM 04 - Fator de vencimento
+cRetorno += StrZero(aValores[2]*100,10) //10 a 19 TAM 10 - Saldo do titulo
+//cRetorno += STRZERO(0,6)
+cRetorno += ALLTRIM(cNNumImp) //20 a 30 nosso numero sem o DV
+cRetorno += StrZero(Val(SUBSTR(cAgencia,1,LEN(ALLTRIM(cAgencia))-1)),4) //31 a 34 N?ero da Ag?cia de Relacionamento, sem DV 
+cRetorno += StrZero(Val(SUBSTR(cConta,1,LEN(ALLTRIM(cConta))-1)),8) //35 a 42 Conta Corrente de Relacionamento, sem DV 
+cRetorno += StrZero(Val(cCarteira),2) // 43 a 44 TAM 02 - Carteira
+
+Return(cRetorno)
+
+/*
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+??rograma  ?    LD001    ?Autor ?Carlos Daniel      ?Data ? 00/00/00   ??
+?????????????????????????????????????????
+??esc.     ?Retorna a expressao da linha digitavel - BANCO BRASIL          ??
+??         ?para convenio com 7 posicoes.                                  ??
+??         ?                                                               ??
+?????????????????????????????????????????
+??so       ?Chamado no campo EE_C_LINDI                                    ??
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+*/
+User Function LD001()      //BRASIL
+
+
+Local cDvCodBar := SubStr(SE1->E1_C_CODBA,05,01)// Digito verificador do codigo de barras
+Local cPosBar1  := SubStr(SE1->E1_C_CODBA,20,05)// Posicao 20 a 24 do codigo de barras
+Local cPosBar2  := SubStr(SE1->E1_C_CODBA,25,10)// Posicao 25 a 34 do codigo de barras
+Local cPosBar3  := SubStr(SE1->E1_C_CODBA,35,10)// Posicao 35 a 44 do codigo de barras
+Local aLinha    := {"","","","",""}             // Array que armazenara os dados da linha digitavel
+
+//1o. Grupo - TAM 10:
+aLinha[1] := "001"                               // Codigo do banco.                      - TAM 03
+aLinha[1] += "9"                                 // Codigo da Moeda (Real = 9, Outras=0)  - TAM 01
+aLinha[1] += cPosBar1                            // Posicao 20 a 24 do codigo de barras   - TAM 05
+aLinha[1] += AllTrim(Str(U_Modulo10(aLinha[1]))) // Digito de controle no modulo 10       - TAM 01
+
+//2o. Grupo - TAM 11:
+aLinha[2] := cPosBar2                            // Posicao 25 a 34 do codigo de barras - TAM 10
+aLinha[2] += AllTrim(Str(U_Modulo10(aLinha[2]))) // Digito de controle no modulo 10     - TAM 01
+
+//3o. Grupo - TAM 11:
+aLinha[3] := cPosBar3                            // Posicao 35 a 44 do codigo de barras - TAM 10
+aLinha[3] += AllTrim(Str(U_Modulo10(aLinha[3]))) // Digito de controle no modulo 10     - TAM 01
+
+//4o. Grupo - TAM 01:
+aLinha[4] += cDvCodBar //Digito verificador do codigo de barras, ou seja, a 5a posicao do codigo de barras
+
+//5o. Grupo - TAM 14:
+aLinha[5] += AllTrim(Str(1000 + (aValores[1] - CToD("03/07/2000")))) // FATOR DE VENCIMENTO - TAM 04
+aLinha[5] += StrZero(aValores[2]*100,10)                             // VALOR DO TITULO     - TAM 10
+
+Return(Transform(aLinha[1],"@R 99999.99999")+" "+Transform(aLinha[2],"@R 99999.999999")+" "+Transform(aLinha[3],"@R 99999.999999")+" "+aLinha[4]+" "+aLinha[5])
+/*/
+????????????????????????????????????????????????
+????????????????????????????????????????????????
+????????????????????????????????????????????????
+??rograma  ?B320     ?Autor ?Carlos Daniel         ?Data da Criacao  ?01/01/2013     ??
+????????????????????????????????????????????????
+??esc.     ?etorna a expressao do codigo de barra    BANCO ITAU           				??
+??         ?															                    ??
+????????????????????????????????????????????????
+/*/ 
+
+User Function CB341()   //ITAU
+
+Local cAgencia		:= SEE->EE_AGENCIA
+Local cCarteira		:= SEE->EE_CODCART
+Local dvencimento	:= aValores[1]
+Local cRetorno   := ""
+Local cFatVencto := AllTrim(Str(1000 + (dvencimento - CToD("03/07/2000"))))
+Local cSequencial := StrZero(Val(SEE->EE_FAXATU)+1,8) 
+Local cConta := StrZero(Val(SUBSTR(SEA->EA_NUMCON,1,LEN(ALLTRIM(SEA->EA_NUMCON))-1)),5)  //Conta sem digito
+local cNNumSDig := cCarteira + cSequencial    
+Local cNNum := StrZero(Val(cAgencia),4) + cConta + cNNumSDig       // digito verifacador Agencia + Conta + Carteira + Nosso Num 
+Local cNNumDac := AllTrim(Str(U_Modulo10(cNNum))) //DAC nosso numero
+Local cNossoNum := cCarteira + cSequencial + cNNumDac //109/000003359 PARA IMPRESS?
+Local cMoed :="9"
+Private cBanc :="341"
+Private cNNumImp := cCarteira + "/" + cSequencial +"-"+ cNNumDac 			 
+If Empty(SE1->E1_NUMBCO)                         
+	//Pesquisa as informacoes na tabela de PARAMETROS BANCOS 
+	dbSelectArea("SEE")
+	SEE->(dbSetOrder(1))
+	If !SEE->(dbSeek(xFilial("SEE")+SEA->EA_PORTADO+SEA->EA_AGEDEP+SEA->EA_NUMCON ))
+		Return("")
+	Else
+		SEE->(RecLock("SEE",.F.))
+		SEE->EE_FAXATU := cSequencial //StrZero(Val(SEE->EE_FAXATU)+1,6)   
+		SEE->(MsUnLock())
+	EndIf 
+
+	//Atualiza o NUMBCO (nosso numero)
+	SE1->(RecLock("SE1",.F.))
+	SE1->E1_NUMBCO := cNossoNum
+	SE1->(MsUnlock())   
+
+ELSE
+	cNossoNum	:= SE1->E1_NUMBCO  
+	cSequencial	:= substr(cNossoNum,LEN(ALLTRIM(cCarteira))+1,LEN(ALLTRIM(cSequencial)))
+	cNNumDac	:= SUBSTR(cNossoNum,LEN(ALLTRIM(cNossoNum)),1)
+EndIf
+//TOTAL TEM QUE TER 44 DIGITOS
+cRetorno := cBanc //Codigo do banco      
+cRetorno += cMoed //Tipo de Moeda  
+cRetorno += AllTrim(Str(U_Modulo11(cBanc+cMoed+cFatVencto+StrZero(aValores[2]*100,10)+ALLTRIM(cNossoNum)+StrZero(Val(cAgencia),4)+cConta+ AllTrim(Str(U_Modulo10(StrZero(Val(cAgencia),4)+cConta)))+"000")))  //Digito do codigo de barra 
+cRetorno += cFatVencto //Fator de vencimento
+cRetorno += StrZero(aValores[2]*100,10) //Saldo do titulo 
+cRetorno += ALLTRIM(cCarteira) //carteira
+cRetorno += cSequencial //Nosso Numero
+cRetorno += cNNumDac //DAC [Ag?cia /Conta/Carteira/Nosso N?ero] (Anexo 4)
+cRetorno += StrZero(Val(SUBSTR(cAgencia,1,4)),4) //N.?da Ag?cia cedente
+cRetorno += StrZero(Val(SUBSTR(SEE->EE_CONTA,1,5)),5) //N.?da Conta Corrente
+cRetorno += AllTrim(Str(U_Modulo10(StrZero(Val(cAgencia),4)+cConta))) //DAC [Ag?cia/Conta Corrente] (Anexo 3)
+cRetorno += "000" //ZEROS 000 FIXO  
+
+Return(cRetorno)
+
+/*/
+????????????????????????????????????????????????
+????????????????????????????????????????????????
+????????????????????????????????????????????????
+??rograma  ?D230     ?Autor ?Carlos Daniel         ?Data da Criacao  ?01/01/2013     ??
+????????????????????????????????????????????????
+??esc.     ?etorna a expressao da linha digitavel      BANCO INDUSTRIAL   				??
+??         ?															                    ??
+????????????????????????????????????????????????
+/*/
+
+User Function LD341()  //ITAU
+Local aLinha 	:= {"","","","",""}
+Local cCamLiv	:= SUBSTR(SE1->E1_C_CODBA,20,25)
+Local cCarteira		:= SEE->EE_CODCART
+Local cSequencial := StrZero(Val(SEE->EE_FAXATU),2)
+
+//1o. Grupo: BANCO + TIPO DE MOEDA + 5 PRIMEIROS DIGITOS DO SEQUENCIAL DO BANCO + 5 PRIMEIROS CARACTERES DO NOSSO NUMERO + DIGITO MODULO 10 
+//AAABC.CCDDX DDDDD.DEFFFY FGGGG.GGHHHZ K UUUUVVVVVVVVVV
+aLinha[1] := SUBSTR(SE1->E1_C_CODBA,1,3) //AAA = C?igo do Banco na C?ara de Compensa?o (Ita?341)
+aLinha[1] += SUBSTR(SE1->E1_C_CODBA,4,1) //Fixo tipo de moeda (9=Real) 
+aLinha[1] += cCarteira //CCC =C?igo da carteira de cobran?
+aLinha[1] += SUBSTR(SE1->E1_NUMBCO,4,2) //DD = Dois primeiros d?itos do Nosso N?ero
+aLinha[1] += AllTrim(Str(U_Modulo10(aLinha[1]))) //Digito de controle no modulo 10 //X = DAC que amarra o campo 1 (Anexo3)
+                                              
+//2o. Grupo: 5 ULTIMAS POSICOES DO NOSSO NUMERO + DIGITO DO NOSSO NUMERO + NUMERO DA CONTA DE COBRANCA + DIGITI VERIFICADOR MODULO 10 
+aLinha[2] := SUBSTR(SE1->E1_NUMBCO,6,6) // DDDDDD= Restante do Nosso N?ero
+aLinha[2] += SUBSTR(SE1->E1_NUMBCO,12,1) //E = DAC do campo [Ag?cia/Conta/Carteira/ Nosso N?ero] 
+aLinha[2] += SUBSTR(SEE->EE_AGENCIA,1,3) //FFF =Tr? primeiros n?eros que identificam a Ag?cia
+aLinha[2] += AllTrim(Str(U_Modulo10(aLinha[2]))) //Digito de controle no modulo 10 //Y = DAC que amarra o campo 2 (Anexo 3)
+//3o. Grupo: NUMERO + DIGITO DA CONTA + CODIGO DA CARTEIRA + CODIGO APLICATIVO + DIGITO DO BLOCO
+
+aLinha[3] := SUBSTR(SEE->EE_AGENCIA,4,1) //F =Restante do n?ero que identifica a ag?cia
+aLinha[3] += StrZero(Val(SUBSTR(SEE->EE_CONTA,1,6)),6) //GGGGGG = N?ero da conta corrente + DAC
+aLinha[3] += "000" //HHH =Zeros ( N? utilizado )
+aLinha[3] += AllTrim(Str(U_Modulo10(aLinha[3]))) //Digito de controle no modulo 10 //Z = DAC que amarra o campo 3 (Anexo 3)
+
+//4o. Grupo: DIGITO VERIFICADOR DO CODIGO DE BARRAS
+aLinha[4] += SUBSTR(SE1->E1_C_CODBA,5,1) //DAC do C?igo de Barras (Anexo 2)
+
+//5o. Grupo: FATOR DE VENCIMENTO + VALOR DO TITULO 
+aLinha[5] += AllTrim(Str(1000 + (aValores[1] - CToD("03/07/2000")))) //UUUU=Fator de vencimento
+aLinha[5] += StrZero(aValores[2]*100,10) //Valor do T?ulo (*)
+            
+Return(Transform(aLinha[1],"@R 99999.99999")+" "+Transform(aLinha[2],"@R 99999.999999")+" "+Transform(aLinha[3],"@R 99999.999999")+" "+aLinha[4]+" "+aLinha[5])       
+/*
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+??rograma  ?    CB237    ?utor  ?arlos Daniel- Totvs ?Data ? 20/12/12  ??
+?????????????????????????????????????????
+??esc.     ?etorna a expressao do codigo de barra  Bradesco                ??
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+*/
+User Function CB237()  //BRADESCO
+
+Local cAgencia		:= SEE->EE_AGENCIA
+Local cCarteira		:= SEE->EE_CODCART
+Local dvencimento	:= aValores[1]
+Local cRetorno   := ""
+Local cFatVencto := AllTrim(Str(1000 + (dvencimento - CToD("03/07/2000"))))
+Local cConta := AllTrim(SEE->EE_CONTA)
+Local cSequencial := StrZero(Val(SEE->EE_FAXATU)+1,11)//NextNumero("SEE",3,"SEE->EE_FAXATU",.T.) 	//StrZero(Val(SEE->EE_FAXATU)+1,11)
+local cNNumSDig := ALLTRIM(cCarteira) + cSequencial 
+Local cNNumDac := ""
+Local cNossoNum := ""
+Local cBanc 	:= "237"
+Local cCont		:=0
+Local aAreaSE1:=SE1->(GetArea())
+
+Private cNNumImp := ""
+	cNNumDac := AllTrim(U_Modulo11(cNNumSDig))
+//	cNossoNum := ALLTRIM(cCarteira) + cSequencial + cNNumDac //109/000003359 PARA IMPRESS? 
+	cNossoNum := cSequencial + cNNumDac //109/000003359 PARA IMPRESS? 
+	cNNumImp := ALLTRIM(cCarteira) +"/"+ cSequencial +"-"+ cNNumDac 
+If Empty(SE1->E1_NUMBCO)                         
+	//Pesquisa as informacoes na tabela de PARAMETROS BANCOS 
+	dbSelectArea("SEE")
+	SEE->(dbSetOrder(1))
+	If !SEE->(dbSeek(xFilial("SEE")+SEE->EE_CODIGO+SEE->EE_AGENCIA+SEE->EE_CONTA ))
+		Return("")
+	Else
+		
+		//Verifica se j?o numero j?esta sendo utilizado.
+		While .T.
+			DbSelectArea("SE1")
+			SE1->(DbOrderNickName("NOSSNUM"))
+			If SE1->(DbSeek("0101"+cSequencial)) .Or. SE1->(DbSeek("0103"+cSequencial))
+				cSequencial := StrZero(Val(cSequencial)+1,11) //cSequencial+cCont
+				cNNumSDig 	:= ALLTRIM(cCarteira) + cSequencial 
+				cNNumDac 	:= AllTrim(U_Modulo11(cNNumSDig))
+				cNossoNum 	:= cSequencial + cNNumDac //109/000003359 PARA IMPRESS? 
+				cCont++
+			Else
+				Exit
+			EndIf
+		EndDo
+		RestArea(aAreaSE1)
+		
+		SEE->(RecLock("SEE",.F.))
+		SEE->EE_FAXATU := cSequencial 
+		SEE->(MsUnLock())
+	EndIf 
+
+	//Atualiza o NUMBCO (nosso numero)
+	SE1->(RecLock("SE1",.F.))
+	SE1->E1_NUMBCO := cNossoNum
+	SE1->E1_LOG    :=cUserName+"/"+Upper(AllTrim(FunName()))
+	SE1->(MsUnlock())      
+Else
+	cNossoNum := SE1->E1_NUMBCO           
+	cSequencial	:= substr(cNossoNum,1,LEN(ALLTRIM(cSequencial)))
+	cNNumDac	:= SUBSTR(cNossoNum,LEN(ALLTRIM(cNossoNum))-1,1)
+EndIf 
+
+cRetorno := cBanc //Fixo banco 
+cRetorno += "9" //Tipo de Moeda, fixo 9
+cRetorno += AllTrim(U_Modulo11(cBanc+"9"+cFatVencto+StrZero(aValores[2]*100,10)+StrZero(Val(SUBSTR(cAgencia,1,4)),4)+alltrim(cCarteira)+SUBSTR(AllTrim(cNossoNum),1,11)+StrZero(Val(SUBSTR(SEE->EE_CONTA,1,LEN(ALLTRIM(SEE->EE_CONTA))-1)),7)+"0",9,"B"))  //Digito do codigo de barras
+cRetorno += cFatVencto //Fator de vencimento
+cRetorno += StrZero(aValores[2]*100,10) //Saldo do titulo 
+cRetorno += StrZero(Val(SUBSTR(cAgencia,1,4)),4) //agencia de recebimento
+cRetorno += ALLTRIM(cCarteira) //carteira
+cRetorno += SUBSTR(AllTrim(cNossoNum),1,11) //N?ero do Nosso N?ero(Sem o digito verificador)
+cRetorno += StrZero(Val(SUBSTR(SEE->EE_CONTA,1,LEN(ALLTRIM(SEE->EE_CONTA))-1)),7) //Conta de recebimento
+cRetorno += "0" //fixo 0
+
+Return(cRetorno)
+
+/*
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+??rograma  ?    LD237    ?utor  ?arlos Daniel       ?Data ? 01/01/13   ??
+?????????????????????????????????????????
+??esc.     ?etorna a expressao da linha digitavel  Bradesco                ??
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+*/
+User Function LD237()  //BRADESCO
+Local aLinha 	:= {"","","","",""}                                                                                     
+
+Local cCamLiv	:= SUBSTR(SE1->E1_C_CODBA,20,25)
+Local cBanc := "237"
+//1o. Grupo: BANCO + TIPO DE MOEDA + 5 PRIMEIROS DIGITOS DO SEQUENCIAL DO BANCO + 5 PRIMEIROS CARACTERES DO NOSSO NUMERO + DIGITO MODULO 10
+aLinha[1] := cBanc //Fixo Banco BRADESCO
+aLinha[1] += "9" //Fixo tipo de moeda (9=Real)
+aLinha[1] += SubStr(cCamLiv,1,5) //as cinco primeiras posi?es do campo livre
+aLinha[1] += AllTrim(Str(U_Modulo10(aLinha[1]))) //Digito de controle no modulo 10
+
+//2o. Grupo: 5 ULTIMAS POSICOES DO NOSSO NUMERO + DIGITO DO NOSSO NUMERO + NUMERO DA CONTA DE COBRANCA + DIGITI VERIFICADOR MODULO 10 
+aLinha[2] := SubStr(cCamLiv,6,10) // 6?a 15?do campo livre
+aLinha[2] += AllTrim(Str(U_Modulo10(aLinha[2]))) //Digito de controle no modulo 10   
+
+//3o. Grupo: NUMERO + DIGITO DA CONTA + CODIGO DA CARTEIRA + CODIGO APLICATIVO + DIGITO DO BLOCO
+aLinha[3] := SubStr(cCamLiv,16,10) // posi?es 16?a 25?do campo livre
+aLinha[3] += AllTrim(Str(U_Modulo10(aLinha[3]))) //Digito de controle no modulo 10  
+
+//4o. Grupo: DIGITO VERIFICADOR DO CODIGO DE BARRAS
+aLinha[4] += SUBSTR(SE1->E1_C_CODBA,5,1) //digito verificador do codigo de barras
+
+//5o. Grupo: FATOR DE VENCIMENTO + VALOR DO TITULO 
+aLinha[5] += AllTrim(Str(1000 + (aValores[1] - CToD("03/07/2000")))) //Fator de vencimento
+aLinha[5] += StrZero(aValores[2]*100,10) //Valor do titulo
+            
+Return(Transform(aLinha[1],"@R 99999.99999")+" "+Transform(aLinha[2],"@R 99999.999999")+" "+Transform(aLinha[3],"@R 99999.999999")+" "+aLinha[4]+" "+aLinha[5])
+/*
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+??rograma  ?    CB756    ?utor  ?arlos Daniel- Totvs ?Data ? 20/12/12  ??
+?????????????????????????????????????????
+??esc.     ?etorna a expressao do codigo de barra  SICOOB                  ??
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+*/
+User Function CB756()   //BANCOOB
+
+Local cAgencia		:= SEE->EE_AGENCIA
+Local cCarteira		:= SEE->EE_CODCART
+Local dvencimento	:= aValores[1]
+Local cRetorno   := ""
+Local cFatVencto := AllTrim(Str(1000 + (dvencimento - CToD("03/07/2000"))))
+Local cConta := AllTrim(SEE->EE_CODEMP)
+Local cSequencial := StrZero(Val(SEE->EE_FAXATU)+1,7)
+Local cBanc := "756" 
+Local cCoop := "3154" //Codigo da Cooperativa
+local cNNumSDig := ""//ALLTRIM(cCoop) + StrZero(Val(SEE->EE_CODEMP),10) + cSequencial 
+Local cNNumDac := ""
+Local cNNumImp := ""
+Private cNossoNum := ""          
+
+While !MayIUseCode(cSequencial)  //verifica se esta na memoria, sendo usado 
+				
+	cSequencial	:= StrZero(Val(cSequencial)+1,7) 
+					
+EndDo  
+
+cNNumSDig	:= ALLTRIM(cCoop) + StrZero(Val(SEE->EE_CODEMP),10) + cSequencial
+	
+cNNumDac := AllTrim(str(U_Modulo11(cNNumSDig,,,,"N")))
+
+cNossoNum := cSequencial + cNNumDac //109/000003359 PARA IMPRESS? 
+cNNumImp := cSequencial + cNNumDac 
+	
+If Empty(SE1->E1_NUMBCO)                         
+	//Pesquisa as informacoes na tabela de PARAMETROS BANCOS 
+	dbSelectArea("SEE")
+	SEE->(dbSetOrder(1))
+	If !SEE->(dbSeek(xFilial("SEE")+SEA->EA_PORTADO+SEA->EA_AGEDEP+SEA->EA_NUMCON ))
+		Return("")
+	Else                 
+		IF SEE->EE_FAXATU < cSequencial 
+			SEE->(RecLock("SEE",.F.))
+			SEE->EE_FAXATU := cSequencial 
+			SEE->(MsUnLock())
+		ENDIF
+	EndIf 
+
+	//Atualiza o NUMBCO (nosso numero)
+	SE1->(RecLock("SE1",.F.))
+	SE1->E1_NUMBCO := cNossoNum
+	SE1->(MsUnlock())
+EndIf                               
+
+
+cRetorno := cBanc //Fixo banco 
+cRetorno += "9" //Tipo de Moeda, fixo 9
+cRetorno += AllTrim(str(U_Modulo11(cBanc+"9"+cFatVencto+StrZero(aValores[2]*100,10)+"1"+ALLTRIM(cCoop)+"02"+StrZero(Val(cConta),7)+StrZero(Val(SE1->E1_NUMBCO),8)+StrZero(Val(SE1->E1_PARCELA),3),,,,"C")))  //Digito do codigo de barras
+cRetorno += cFatVencto //Fator de vencimento
+cRetorno += StrZero(aValores[2]*100,10) //Saldo do titulo 
+cRetorno += "1" //Cod Carteira
+cRetorno += ALLTRIM(cCoop) //codigo da cooperativa
+cRetorno += "02" //Modalidade
+cRetorno += StrZero(Val(cConta),7) //Conta de recebimento
+//cRetorno += StrZero(Val(SE1->E1_NUM),8)
+cRetorno += StrZero(Val(SE1->E1_NUMBCO),8)
+cRetorno += StrZero(Val(SE1->E1_PARCELA),3)
+
+Return(cRetorno)
+
+/*
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+??rograma  ?    LD756    ?utor  ?arlos Daniel       ?Data ? 06/01/12   ??
+?????????????????????????????????????????
+??esc.     ?etorna a expressao da linha digitavel  SICOOB                  ??
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+*/
+User Function LD756()  //BANCOOB
+Local aLinha 	:= {"","","","",""}
+Local cCamLiv	:= SUBSTR(SE1->E1_C_CODBA,20,25)
+Local cBanc := "756" 
+Local cNNumImp := SUBSTR(AllTrim(SE1->E1_NUMBCO),1,8)
+//1o. Grupo: BANCO + TIPO DE MOEDA + 5 PRIMEIROS DIGITOS DO SEQUENCIAL DO BANCO + 5 PRIMEIROS CARACTERES DO NOSSO NUMERO + DIGITO MODULO 10
+aLinha[1] := cBanc //Fixo Banco BRADESCO
+aLinha[1] += "9" //Fixo tipo de moeda (9=Real)
+aLinha[1] += SubStr(cCamLiv,1,5) //as cinco primeiras posi?es do campo livre
+aLinha[1] += AllTrim(Str(U_Modulo10(aLinha[1]))) //Digito de controle no modulo 10
+
+//2o. Grupo: 5 ULTIMAS POSICOES DO NOSSO NUMERO + DIGITO DO NOSSO NUMERO + NUMERO DA CONTA DE COBRANCA + DIGITI VERIFICADOR MODULO 10 
+aLinha[2] := SubStr(cCamLiv,6,9) // 6?a 15?do campo livre
+aLinha[2] += SubStr(cNNumImp,1,1)
+aLinha[2] += AllTrim(Str(U_Modulo10(aLinha[2]))) //Digito de controle no modulo 10   
+
+//3o. Grupo: NUMERO + DIGITO DA CONTA + CODIGO DA CARTEIRA + CODIGO APLICATIVO + DIGITO DO BLOCO
+aLinha[3] := SubStr(cNNumImp,2,7)
+aLinha[3] += SubStr(cCamLiv,23,3) // posi?es 16?a 25?do campo livre
+aLinha[3] += AllTrim(Str(U_Modulo10(aLinha[3]))) //Digito de controle no modulo 10  
+
+//4o. Grupo: DIGITO VERIFICADOR DO CODIGO DE BARRAS
+aLinha[4] += SUBSTR(SE1->E1_C_CODBA,5,1) //digito verificador do codigo de barras
+
+//5o. Grupo: FATOR DE VENCIMENTO + VALOR DO TITULO 
+aLinha[5] += AllTrim(Str(1000 + (aValores[1] - CToD("03/07/2000")))) //Fator de vencimento
+aLinha[5] += StrZero(aValores[2]*100,10) //Valor do titulo
+            
+Return(Transform(aLinha[1],"@R 99999.99999")+" "+Transform(aLinha[2],"@R 99999.999999")+" "+Transform(aLinha[3],"@R 99999.999999")+" "+aLinha[4]+" "+aLinha[5])
+/*
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+??rograma  ?   CB224     ?utor  ?Carlos Daniel      ?Data ? 01/01/13   ??
+?????????????????????????????????????????
+??esc.     ?Retorna a expressao da representacao do cod. barras - BCO FIBRA??
+??         ?                                                               ??
+??         ?Apesar do cliente possuir conta no Banco FIBRA e o arquivo de  ??
+??         ?remessa e retorno serem do banco FIBRA, o boleto eh impresso   ??
+??         ?com os dados do Bradesco, pois o banco FIBRA usa o Bradesco    ??
+??         ?como banco correspondente.                                     ??
+??         ?                                                               ??
+??         ?Verificar se o campo EE_FAXATU tem a quantidade de digitos     ??
+??         ?adequada. No caso do FIBRA/BRADESCO deve ser 11 digitos,       ??
+??         ?Exemplo: EE_FAXATU = "00000000001"    Banco FIBRA              ??
+??         ?                                                               ??
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+*/
+User Function CB224() //FIBRA
+
+Local cRetorno   := ""
+Local cFatVencto := AllTrim(Str(1000 + (aValores[1] - CToD("03/07/2000"))))
+Local nTamFaxa   := 11 // Tamanho do sequencial informado no campo EE_FAXATU
+Local nBaseM11   := 7  // Base de calculo da funcao U_Modulo11()
+
+//???????????????????????????????????????????
+//?O banco Fibra usa como correspondente o banco Bradesco.                           ?
+//?Logo o Boleto apesar de ser do Fibra eh gerado com os dados do Bradesco.          ?
+//?Sendo assim precisamos vincular alguma conta do Bradesco com a conta do Fibra.    ?
+//???????????????????????????????????????????
+Local cBcoCorr := AllTrim(SEE->EE_CODIGO) // Codigo do banco correspondente (Bradesco).
+Local cAgeCorr := AllTrim(SEE->EE_AGENCIA) // Agencia correspondente do Fibra no Bradesco (Digito 8).
+Local cCtaCorr := AllTrim(SEE->EE_CONTA) // Conta correspondente do Fibra no Bradesco (Digito 3).
+Local cCarteira:= AllTrim(SEE->EE_CODCART) // Carteira correspondente.
+Local cDigito  := ''
+                                                                                     
+//Numera o IDCNAB com o nosso numero
+If !Empty(SE1->E1_NUMBCO) 
+	//Pesquisa as informacoes na tabela de PARAMETROS BANCOS 
+	dbSelectArea("SEE")
+	SEE->(dbSetOrder(1))
+	If !SEE->(dbSeek(xFilial("SEE")+SEA->EA_PORTADO+SEA->EA_AGEDEP+SEA->EA_NUMCON ))
+		Return("")
+	Else
+		SEE->(RecLock("SEE",.F.))
+		SEE->EE_FAXATU := StrZero(Val(SEE->EE_FAXATU)+1,nTamFaxa)
+		SEE->(MsUnLock())
+	EndIf 
+
+	//Atualiza o NUMBCO (nosso numero)
+	cDigito  := AllTrim(Str(U_Modulo11(cCarteira+AllTrim(SEE->EE_FAXATU),nBaseM11)))	
+	if cDigito == "10"
+		cDigito  := "P"
+	elseif cDigito == "11"
+		cDigito  := "0"
+	endif
+	SE1->(RecLock("SE1",.F.))
+		SE1->E1_NUMBCO := AllTrim(SEE->EE_FAXATU)+cDigito
+	SE1->(MsUnlock())
+EndIf 
+
+//O codigo de barras possui 44 posicoes no total,
+//sendo as primeiras 19 posicoes:
+cRetorno := "237"                       //Codigo do banco. O Banco FIBRA usa o correspondente 237-BRADESCO - 01 a 03 - TAM 3
+cRetorno += "9"                         //Codigo da Moeda (Real = 9, Outras=0)           - 04 a 04 - TAM 1 
+cRetorno += AllTrim(Str(U_Modulo11("2379"+cFatVencto+StrZero(aValores[2]*100,10)+STRZERO(VAL(cAgeCorr),4)+STRZERO(VAL(cCarteira),2)+SubStr(SE1->E1_NUMBCO,1,Len(AllTrim(SE1->E1_NUMBCO))-1)+StrZero(Val(cCtaCorr),7)+"0",9,"B")))//Digito do codigo de barras - 05 a 05 - TAM 1 
+//cRetorno += AllTrim(Str(U_Modulo11("2379"+cFatVencto+StrZero(aValores[2]*100,10)+AllTrim(SE1->E1_NUMBCO)+AllTrim(cAgeCorr)+StrZero(Val(cCtaCorr),7)+"001",9)))//Digito do codigo de barras - 05 a 05 - TAM 1 
+cRetorno += cFatVencto                  //Fator de vencimento - 06 a 09 - TAM 4
+cRetorno += StrZero(aValores[2]*100,10) //Saldo do titulo     - 10 a 19 - TAM 10
+
+//Dados do campo livre (25 posicoes).
+//As posicoes do campo livre ficam a criterio de cada Banco (Vide Layout do Banco).
+cRetorno += StrZero(Val(cAgeCorr),4)                               // 20 a 23 TAM 04 - Agencia Cedente, sem digito, completar com zeros a esquerda
+cRetorno += cCarteira                                              // 24 a 25 TAM 02 - Carteira
+cRetorno += SubStr(SE1->E1_NUMBCO,1,Len(AllTrim(SE1->E1_NUMBCO))-1)// 26 a 36 TAM 11 - Nosso Nro, sem digito
+cRetorno += StrZero(Val(cCtaCorr),7)                               // 37 a 43 TAM 07 - Conta do Cedente, sem digito,completar com zeros a esquerda
+cRetorno += "0"                                                    // 44 a 44 TAM 01 - Zero
+
+Return(cRetorno)
+
+/*
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+??rograma  ?    LD224    ?Autor ?Carlos Daniel      ?Data ? 00/00/00   ??
+?????????????????????????????????????????
+??esc.     ?Retorna a expressao da linha digitavel - BANCO FIBRA           ??
+??         ?                                                               ??
+??         ?Apesar do cliente possuir conta no Banco FIBRA e o arquivo de  ??
+??         ?remessa e retorno serem do banco FIBRA, o boleto eh impresso   ??
+??         ?com os dados do Bradesco, pois o banco FIBRA usa o Bradesco    ??
+??         ?como banco correspondente.         BANCO FIBRA                 ??
+??         ?                                                               ??
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+*/
+User Function LD224()      //FIBRA
+
+Local aLinha   := {"","","","",""}
+Local nBaseM11 := 7       //Base de calculo da funcao U_Modulo11()
+
+//???????????????????????????????????????????
+//?O banco Fibra usa como correspondente o banco Bradesco.                           ?
+//?Logo o Boleto apesar de ser do Fibra eh gerado com os dados do Bradesco.          ?
+//?Sendo assim precisamos vincular alguma conta do Bradesco com a conta do Fibra.    ?
+//???????????????????????????????????????????
+Local cBcoCorr := AllTrim(SEE->EE_CODIGO) // Codigo do banco correspondente (Bradesco).
+Local cAgeCorr := AllTrim(SEE->EE_AGENCIA) // Agencia correspondente do Fibra no Bradesco (Digito 8).
+Local cCtaCorr := AllTrim(SEE->EE_CONTA) // Conta correspondente do Fibra no Bradesco (Digito 3).
+Local cCarteira:= AllTrim(SEE->EE_CODCART) // Carteira correspondente.
+Local cCpoLivre:= ""     // Campo Livre (O preenchimento deste campo depende de cada banco).
+
+//Dados do campo livre (25 posicoes).
+//As posicoes do campo livre ficam a criterio de cada Banco (Vide Layout do Banco).
+cCpoLivre += StrZero(Val(cAgeCorr),4)                               // 01 a 04 TAM 04 - Agencia Cedente, sem digito, completar com zeros a esquerda
+cCpoLivre += cCarteira                                              // 05 a 06 TAM 02 - Carteira
+cCpoLivre += SubStr(SE1->E1_NUMBCO,1,Len(AllTrim(SE1->E1_NUMBCO))-1)// 07 a 17 TAM 11 - Nosso Nro, sem digito
+cCpoLivre += StrZero(Val(cCtaCorr),7)                               // 18 a 24 TAM 07 - Conta do Cedente, sem digito,completar com zeros a esquerda
+cCpoLivre += "0"                                                    // 25 a 25 TAM 01 - Zero
+
+//1o. Grupo - TAM 10:
+aLinha[1] := cBcoCorr                            // Codigo do banco. O Banco FIBRA usa o correspondente 237-BRADESCO - TAM 03
+aLinha[1] += "9"                                 // Codigo da Moeda (Real = 9, Outras=0)                   - TAM 01
+aLinha[1] += SubStr(cCpoLivre,1,5)               // 5 primeiros digitos do campo livre                     - TAM 05
+aLinha[1] += AllTrim(Str(U_Modulo10(aLinha[1]))) // Digito de controle no modulo 10                        - TAM 01
+
+//2o. Grupo - TAM 11: 
+aLinha[2] := SubStr(cCpoLivre,6,10)              // 6a A 15a POSICAO DO CAMPO LIVRE - TAM 10
+aLinha[2] += AllTrim(Str(U_Modulo10(aLinha[2]))) // DIGITO VERIFICADOR MODULO 10    - TAM 01
+
+//3o. Grupo - TAM 11:
+aLinha[3] := SubStr(cCpoLivre,16,10)             // 16a A 25a POSICAO DO CAMPO LIVRE - TAM 10
+aLinha[3] += AllTrim(Str(U_Modulo10(aLinha[3]))) // DIGITO VERIFICADOR MODULO 10     - TAM 01
+
+//4o. Grupo - TAM 01:
+aLinha[4] += SubStr(cCodigoBarras,5,1) //DIGITO VERIFICADOR DO CODIGO DE BARRAS, OU SEJA, A 5a POSICAO DO CODIGO DE BARRAS
+
+//5o. Grupo - TAM 14: 
+aLinha[5] += AllTrim(Str(1000 + (aValores[1] - CToD("03/07/2000")))) // FATOR DE VENCIMENTO - TAM 04
+aLinha[5] += StrZero(aValores[2]*100,10)                             // VALOR DO TITULO     - TAM 10
+            
+Return(Transform(aLinha[1],"@R 99999.99999")+" "+Transform(aLinha[2],"@R 99999.999999")+" "+Transform(aLinha[3],"@R 99999.999999")+" "+aLinha[4]+" "+aLinha[5])
+/*
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+??rograma  ?    CB033    ?utor  ?arlos Daniel- Totvs ?Data ? 20/12/12  ??
+?????????????????????????????????????????
+??esc.     ?etorna a expressao do codigo de barra  SANTANDER               ??
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+*/
+User Function CB033()   //SANTANDER
+
+Local cAgencia		:= SEE->EE_AGENCIA
+Local cCarteira		:= SEE->EE_CODCART
+Local dvencimento	:= aValores[1]
+Local cRetorno   := ""
+Local cFatVencto := AllTrim(Str(1000 + (dvencimento - CToD("03/07/2000"))))
+Local cConta := AllTrim(SEE->EE_CONTA)
+Local cSequencial := StrZero(Val(SEE->EE_FAXATU)+1,12)
+Local cBanc := "033" 
+Local cCoSed := AllTrim(SEE->EE_CODEMP) //Codigo do sedente
+Local cNNumDac := ""
+Local cNossoNum := "" 
+	cNNumDac := U_Modulo11(cSequencial) // digito nosso numero
+	cNossoNum := cSequencial + AllTrim(Str(cNNumDac)) //000000000001-X 
+	cNNumImp  := cSequencial + AllTrim(Str(cNNumDac)) //000000000001-X 
+If !Empty(SE1->E1_NUMBCO)                         
+	//Pesquisa as informacoes na tabela de PARAMETROS BANCOS 
+	dbSelectArea("SEE")
+	SEE->(dbSetOrder(1))
+	If !SEE->(dbSeek(xFilial("SEE")+SEA->EA_PORTADO+SEA->EA_AGEDEP+SEA->EA_NUMCON ))
+		Return("")
+	Else
+		SEE->(RecLock("SEE",.F.))
+		SEE->EE_FAXATU := cSequencial 
+		SEE->(MsUnLock())
+	EndIf 
+
+	//Atualiza o NUMBCO (nosso numero)
+	SE1->(RecLock("SE1",.F.))
+	SE1->E1_NUMBCO := cNossoNum
+	SE1->(MsUnlock())
+EndIf 
+
+cRetorno := cBanc //Fixo banco 
+cRetorno += "9" //Tipo de Moeda, fixo 9
+cRetorno += AllTrim(Str(U_Modulo11(cBanc+"9"+cFatVencto+StrZero(aValores[2]*100,10)+"9"+StrZero(Val(cCoSed),7)+"00000"+StrZero(Val(cSequencial),8)+"0"+"101")))  //Digito do codigo de barras
+cRetorno += cFatVencto //Fator de vencimento
+cRetorno += StrZero(aValores[2]*100,10) //Saldo do titulo 
+cRetorno += "9" //Fixo 9 manual
+cRetorno += StrZero(Val(cCoSed),7)//ALLTRIM(cCoSed) //codigo do cedente
+cRetorno += "00000" //FIXO 00000 manual 
+cRetorno += StrZero(Val(cNossoNum),8) // 8 digitos do nosso numero
+cRetorno += "0" //caso IOF
+cRetorno += "101"
+
+Return(cRetorno)
+
+/*
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+??rograma  ?    LD033    ?utor  ?arlos Daniel       ?Data ? 00/00/00   ??
+?????????????????????????????????????????
+??esc.     ?etorna a expressao da linha digitavel  SANTANDER               ??
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+*/
+User Function LD033()  //SANTANDER
+Local aLinha 	:= {"","","","",""}
+Local cCamLiv	:= SUBSTR(SE1->E1_C_CODBA,20,25)
+Local cBanc := "033"
+Local cCoSed := AllTrim(SEE->EE_CODEMP) //Codigo do sedente 
+Local cSequencial := StrZero(Val(SEE->EE_FAXATU)+0,12)
+Local cNNumDac := U_Modulo11(cSequencial)
+Local cNNumImp := cSequencial + AllTrim(Str(cNNumDac)) 
+//1o. Grupo: BANCO + TIPO DE MOEDA + 5 PRIMEIROS DIGITOS DO SEQUENCIAL DO BANCO + 5 PRIMEIROS CARACTERES DO NOSSO NUMERO + DIGITO MODULO 10
+aLinha[1] := cBanc //banco
+aLinha[1] += "9" //Fixo tipo de moeda (9=Real)
+aLinha[1] += "9" //Fixo BANCO SANTANDER
+aLinha[1] += SubStr(cCoSed,1,4) //Codigo do cedente
+aLinha[1] += AllTrim(Str(U_Modulo10(aLinha[1]))) //Digito de controle no modulo 10
+
+//2o. Grupo: 5 ULTIMAS POSICOES DO NOSSO NUMERO + DIGITO DO NOSSO NUMERO + DIGITI VERIFICADOR MODULO 10 
+aLinha[2] := SubStr(cCoSed,5,3) //Codigo do cedente 
+aLinha[2] += SubStr(cNNumImp,1,7)    // 7 digitos primeiro do nosso numero
+aLinha[2] += AllTrim(Str(U_Modulo10(aLinha[2]))) //Digito de controle no modulo 10   
+
+//3o. Grupo: RESTANTE DO NOSSO NUMERO + DIGITO DA CONTA + CODIGO DA CARTEIRA + CODIGO APLICATIVO + DIGITO DO BLOCO
+aLinha[3] := "0"
+aLinha[3] += SubStr(cNNumImp,9,5) // restanten do nosso numero 
+aLinha[3] += "0" //IOF
+aLinha[3] += "101" //Tipo modalidade da carteira
+aLinha[3] += AllTrim(Str(U_Modulo10(aLinha[3]))) //Digito de controle no modulo 10  
+
+//4o. Grupo: DIGITO VERIFICADOR DO CODIGO DE BARRAS
+aLinha[4] += SUBSTR(SE1->E1_C_CODBA,5,1) //digito verificador do codigo de barras
+
+//5o. Grupo: FATOR DE VENCIMENTO + VALOR DO TITULO 
+aLinha[5] += AllTrim(Str(1000 + (aValores[1] - CToD("03/07/2000")))) //Fator de vencimento
+aLinha[5] += StrZero(aValores[2]*100,10) //Valor do titulo
+            
+Return(Transform(aLinha[1],"@R 99999.99999")+" "+Transform(aLinha[2],"@R 99999.999999")+" "+Transform(aLinha[3],"@R 99999.999999")+" "+aLinha[4]+" "+aLinha[5])
+
+/*
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+??rograma  ?   CB399     ?utor  ?arlos Daniel       ?Data ? 00/00/00   ??
+?????????????????????????????????????????
+??esc.     ?etorna a expressao da representacao do codigo de barras  HSBC  ??
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+*/
+User Function CB399()   //HSBC
+Local cRetorno   := ""
+Local cFatVencto := AllTrim(Str(1000 + (aValores[1] - CToD("03/07/2000"))))
+Local cAgencia		:= SEE->EE_AGENCIA
+Local cCarteira		:= SEE->EE_CODCART
+Local cConta        := AllTrim(SEE->EE_CONTA)
+Local cSequencial   := StrZero(Val(SEE->EE_FAXATU)+1,5)
+Local cBanc         := "399" 
+Local cCodCli		:= "12345" //CODIGO CLIENTE NO BANCO                       
+local cNNumSDig 	:= ALLTRIM(cCodCli) + cSequencial
+Local cNNumDac 		:= ""
+Local cNossoNum 	:= ""  
+	cNNumDac := U_Modulo11(cNNumSDig) //AllTrim(U_Modulo11(cNNumSDig))
+	cNossoNum := AllTrim(cNNumSDig) + AllTrim(Str(cNNumDac))                  
+//Numera o IDCNAB com o nosso numero
+If !Empty(SE1->E1_NUMBCO) 
+	//Pesquisa as informacoes na tabela de PARAMETROS BANCOS 
+	dbSelectArea("SEE")
+	SEE->(dbSetOrder(1))
+If !SEE->(dbSeek(xFilial("SEE")+SEA->EA_PORTADO+SEA->EA_AGEDEP+SEA->EA_NUMCON ))
+		Return("")
+	Else
+		SEE->(RecLock("SEE",.F.))
+		SEE->EE_FAXATU := StrZero(Val(SEE->EE_FAXATU)+1,10)
+		SEE->(MsUnLock())
+	EndIf 
+
+	//Atualiza o NUMBCO (nosso numero)
+	SE1->(RecLock("SE1",.F.))
+	SE1->E1_NUMBCO := cNossoNum
+	SE1->(MsUnlock())
+EndIf 
+
+cRetorno := "399" //Fixo banco HSBC
+cRetorno += "9" //Tipo de Moeda, fixo 9
+cRetorno += AllTrim(U_Modulo11("3999"+cFatVencto+StrZero(aValores[2]*100,10)+AllTrim(cNossoNum)+StrZero(Val(SUBSTR(SEA->EA_AGEDEP,1,4)),4)+StrZero(Val(SEA->EA_NUMCON),7)+"001",9,"B"))  //Digito do codigo de barras
+cRetorno += cFatVencto //Fator de vencimento
+cRetorno += StrZero(aValores[2]*100,10) //Saldo do titulo 
+cRetorno += AllTrim(cNossoNum) //Numero bancario (nosso numero)
+cRetorno += StrZero(Val(SUBSTR(SEA->EA_AGEDEP,1,4)),4)+StrZero(Val(SEA->EA_NUMCON),7) //Agencia + Conta de recebimento
+cRetorno += "00" //Carteira fixo "00"
+cRetorno += "1" //Codigo aplicativo de cobranca, fixo "1"
+
+Return(cRetorno)
+/*
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+??rograma  ?    LD399    ?utor  ?arlos Daniel       ?Data ? 00/00/00   ??
+?????????????????????????????????????????
+??esc.     ?etorna a expressao da linha digitavel   BANCO HSBC             ??
+?????????????????????????????????????????
+?????????????????????????????????????????
+?????????????????????????????????????????
+*/
+User Function LD399()    //HSBC
+Local aLinha   := {"","","","",""}
+
+//1o. Grupo: BANCO + TIPO DE MOEDA + 5 PRIMEIROS DIGITOS DO SEQUENCIAL DO BANCO + 5 PRIMEIROS CARACTERES DO NOSSO NUMERO + DIGITO MODULO 10
+aLinha[1] := "399" //Fixo Banco HSBC
+aLinha[1] += "9" //Fixo tipo de moeda (9=Real)
+aLinha[1] += SubStr(SE1->E1_NUMBCO,1,5) //5 primeiras posicoes do nosso numero sequencial por banco 
+aLinha[1] += AllTrim(Str(U_Modulo10(aLinha[1]))) //Digito de controle no modulo 10
+
+//2o. Grupo: 5 ULTIMAS POSICOES DO NOSSO NUMERO + DIGITO DO NOSSO NUMERO + NUMERO DA CONTA DE COBRANCA + DIGITI VERIFICADOR MODULO 10 
+aLinha[2] := SubStr(SE1->E1_NUMBCO,6,6) //5 ultimas posicoes + digito do nosso numero sequencial pelo banco
+aLinha[2] += StrZero(Val(SUBSTR(SEA->EA_AGEDEP,1,4)),4) //Agencia de cobranca
+aLinha[2] += AllTrim(Str(U_Modulo10(aLinha[2]))) //Digito de controle no modulo 10   
+
+//3o. Grupo: NUMERO + DIGITO DA CONTA + CODIGO DA CARTEIRA + CODIGO APLICATIVO + DIGITO DO BLOCO
+aLinha[3] := StrZero(Val(SEA->EA_NUMCON),7) //Numero + digito da conta
+aLinha[3] += "00" //Fixo codigo da carteira
+aLinha[3] += "1" //Fixo codigo do aplicativo
+aLinha[3] += AllTrim(Str(U_Modulo10(aLinha[3]))) //Digito de controle no modulo 10  
+
+//4o. Grupo: DIGITO VERIFICADOR DO CODIGO DE BARRAS
+aLinha[4] += SubStr(cCodigoBarras,5,1) //digito verificador do codigo de barras
+
+//5o. Grupo: FATOR DE VENCIMENTO + VALOR DO TITULO 
+aLinha[5] += AllTrim(Str(1000 + (aValores[1] - CToD("03/07/2000")))) //Fator de vencimento
+aLinha[5] += StrZero(aValores[2]*100,10) //Valor do titulo
+            
+Return(Transform(aLinha[1],"@R 99999.99999")+" "+Transform(aLinha[2],"@R 99999.999999")+" "+Transform(aLinha[3],"@R 99999.999999")+" "+aLinha[4]+" "+aLinha[5])  

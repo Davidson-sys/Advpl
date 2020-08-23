@@ -1,0 +1,53 @@
+#include 'protheus.ch'
+#include 'parmtype.ch'
+//Davidson 28/04/2017-Não utilizar esta levando frete errado pra DANFE.
+/*/
+{Protheus.doc} M410GET()
+Ponto de Entrada para Tratar Valor de Frete na Alteração de Pedido
+
+@author Davis Magalhães
+@since  27/04/2016
+@version 1.0 
+
+@param  N/H
+
+@return Logico (.T. ou .F.)
+user function M410GET()
+/*/
+
+User Function M410GET()
+
+Local cPedido		:= M->C5_NUM
+Local nVLFrete		:= 0
+Local nPosQtd  		:= aScan(aHeader,{|x| AllTrim(x[2])=="C6_QTDVEN"})
+Local nPosPrd 		:= aScan(aHeader,{|x| AllTrim(x[2])=="C6_PRODUTO"})
+Local nPosUM 		:= aScan(aHeader,{|x| AllTrim(x[2])=="C6_UM"})
+Local nPosFrI 		:= aScan(aHeader,{|x| AllTrim(x[2])=="C6_C_FRETE"})
+Local nPosPrV		:= aScan(aHeader,{|x| AllTrim(x[2])=="C6_PRCVEN"})
+Local nPosPrU		:= aScan(aHeader,{|x| AllTrim(x[2])=="C6_PRUNIT"})
+Local nPosVlT		:= aScan(aHeader,{|x| AllTrim(x[2])=="C6_VALOR"})
+Local nXy			:= 0
+
+	
+For nXy := 1 To Len(aCols)
+
+	If ! Empty(aCols[nXy][nPosFrI])
+
+		nVlFrete += aCols[nXy][nPosFrI]
+		
+		//nValorTotal := Round( ( (aCols[nXy][nPosPrV] - aCols[nXy][nPosFrI]) * aCols[nXy][nPosQtd] ),2)
+		
+		aCols[nXy][nPosPrV] := (aCols[nXy][nPosPrV] - aCols[nXy][nPosFrI])
+		aCols[nXy][nPosPrU] := (aCols[nXy][nPosPrU] - aCols[nXy][nPosFrI])
+		aCols[nXy][nPosVlT] := Round( (aCols[nXy][nPosPrV]  * aCols[nXy][nPosQtd]) ,2)
+
+	EndIF
+
+Next nXy	
+	
+	
+If nVlFrete > 0
+	M->C5_FRETE := nVlFrete
+EndIf
+
+Return()

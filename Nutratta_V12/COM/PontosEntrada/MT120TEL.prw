@@ -1,0 +1,61 @@
+#include "rwmake.ch"
+#include "protheus.ch"
+
+//-------------------------------------------------------------------
+/*/{Protheus.doc} MT120TEL
+Função do Pedido de Compras responsavel pela inclusão, alteração
+exclusão e cópia dos PCs.
+
+@author 	Davidson - Nutratta
+@since 		12/07/2017.
+@version 	P11 R8
+@param   	n/t
+@return  	n/t
+@obs
+Exclusivo para Nutratta
+/*/
+//-------------------------------------------------------------------
+User Function MT120TEL()
+
+Local oNewDialog 	:= PARAMIXB[1]
+Local aPosGet 		:= PARAMIXB[2]
+Local aObj 			:= PARAMIXB[3]
+Local nOpcx 		:= PARAMIXB[4]
+Local aItens		:={"","Normal","Regularização"} 	
+Public _cTpCompra 	:= Space(01)
+
+
+@ 064,aPosGet[1,6] SAY "Tipo de Compra:" OF oNewDialog PIXEL SIZE 060,006  
+@ 063,560 COMBOBOX _cTpCompra ITEMS aItens SIZE 055,008 PIXEL OF oNewDialog
+
+Return(.T.) 
+
+
+//¦+-------------------------------------------------------------------------------+¦
+//¦¦ Utilizar este ponto para gravar o campo adicionado no cabeçalho do pedido     ¦¦
+//¦+-------------------------------------------------------------------------------+¦
+User Function MT120GRV() 
+Private nOPc:=0
+
+If Alltrim(_cTpCompra) $ "Normal"
+	_cTpCompra:="1"
+ElseIf Alltrim(_cTpCompra) $ "Regularização"
+	_cTpCompra:="2"
+Else 
+	_cTpCompra:=GDFIELDGET("C7_TPCOMP",n)
+EndIf
+ 
+For n:=1 To Len(aCols)
+	If !Acols[n][len(aHeader)+1] //nao pega quando a linha esta deletada
+		
+		GDFieldPut("C7_TPCOMP",_cTpCompra,n) //Tipo de compra
+		GDFieldPut("C7_DESCPG",Posicione("SX5",1,xFilial("SX5")+"ZF"+GDFIELDGET("C7_N_FORPG", n),"X5_DESCRI") ,n) //Descrição da forma pagamento.
+		GDFieldPut("C7_DTAPROV",Stod(""),n) //Data da aprovação ultima data de aprovação.
+		GDFieldPut("C7_ZAPROV ","",n) //Ultimo aprovador 
+	Endif
+Next n 
+
+Return
+
+
+

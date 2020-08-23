@@ -1,0 +1,790 @@
+#INCLUDE "RWMAKE.CH"          
+#INCLUDE "PROTHEUS.CH"
+#INCLUDE "MSOBJECT.CH"
+#INCLUDE "topconn.ch"      
+#INCLUDE "COLORS.CH"
+#INCLUDE "TBICONN.CH"
+#include 'parmtype.ch'
+
+Static __aUserLg := {}
+
+//-------------------------------------------------------------------
+/*/{Protheus.doc} RNUTF02
+Relatorio para extração de dados entre Faturamento e Financeiro.
+Relatorio utilizado como base Financeiro.
+
+@author 	Davidson - Nutratta
+@since 		20/02/2017.
+@version 	P11 R8
+@param   	n/t
+@return  	n/t
+@obs
+Exclusivo para Nutratta
+/*/
+//-------------------------------------------------------------------
+
+User Function RNUTF02()
+
+Private nRegTmp   := 0
+Private cArqTrab  := ""
+Private cIndTrb1  := Space(08)
+Private cArqTSA3  := ""
+Private cIndTSA3  := Space(08)
+Private cArqTSM0  := ""
+Private cIndTSM0  := Space(08)
+Private cFops	  := SuperGetMv("NT_CFVENDA",.F.,"5101") //GETMV("NT_CFVENDA") "5101,5102,5105,5106,6101,6102,6105,6106,6107,6108,6111,6551,5551,5949" 
+
+Private aColunas  := {}
+
+//If FindFunction("TRepInUse") .And. TRepInUse()
+//-- Interface de impressao
+oReport := ReportDef()
+oReport:PrintDialog()
+
+Return
+
+
+
+/*ÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜ
+±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±
+±±ÚÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄ¿±±
+±±³Programa  ³ReportDef ³ Autor ³ Davidson Clayton     ³ Data ³09/02/2017  ³±±
+±±ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄ´±±
+±±³Descri‡…o ³A funcao estatica ReportDef devera ser criada para todos os ³±±
+±±³          ³relatorios que poderao ser agendados pelo usuario.          ³±±
+±±³          ³                                                            ³±±
+±±ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´±±
+±±³Retorno   ³ExpO1: Objeto do relatório                                  ³±±
+±±ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´±±
+±±³Parametros³Nenhum                                                      ³±±
+±±³          ³                                                            ³±±
+±±ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´±±
+±±³   DATA   ³ Programador   ³Manutencao efetuada                         ³±±
+±±ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´±±
+±±³          ³               ³                                            ³±±
+±±ÀÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ±±
+±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±
+ßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßß
+/*/
+Static Function ReportDef()
+
+
+Local oReport
+Local oSection1
+Local oSection2
+Local oSection3
+Local oSection4
+Local oSection5
+Local oCell
+Local aOrdem := {}
+
+//ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+//³Criacao do componente de impressao                                      ³
+//³                                                                        ³
+//³TReport():New                                                           ³
+//³ExpC1 : Nome do relatorio                                               ³
+//³ExpC2 : Titulo                                                          ³
+//³ExpC3 : Pergunte                                                        ³
+//³ExpB4 : Bloco de codigo que sera executado na confirmacao da impressao  ³
+//³ExpC5 : Descricao                                                       ³
+//³                                                                        ³
+//ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+//oReport:= TReport():New("RDIE002","Custos por Obras","RDIE002PR4", {|oReport| ReportPrint(oReport,"RDIE02")},"Relacao de Custos por Obra") //"Relacao de Pedidos de Compras"##"Emissao da Relacao de  Pedidos de Compras."##"Sera solicitado em qual Ordem, qual o Intervalo para"##"a emissao dos pedidos de compras."
+oReport:= TReport():New("RNUTF02","Relação de Faturamentos x Recebimentos.","RNUTF02", {|oReport| ReportPrint(oReport)},"Relação de Faturamentos x Recebimentos") //"Relacao de faturamentos x Recebimentos.
+oReport:SetLandscape()
+oReport:SetTotalInLine(.F.)
+
+// -- Ajustas as Perguntas
+AjustaSX1("RNUTF02")
+
+
+Pergunte(oReport:uParam,.F.)
+
+//oSection1 := TRSection():New(oReport,"Relacao de Faturamento por Filial",{"SF2","DTC","SE4","DA3","DA4" }) //"Relacao de Pedidos de Compras"
+oSection1 := TRSection():New(oReport,"Relacao de Faturamentos x Recebimentos") //"Relacao de Pedidos de Compras"
+oSection1 :SetTotalInLine(.F.)
+oSection1 :SetHeaderPage()
+oSection1 :SetTotalText("Total Geral") //"Total Geral "
+
+TRCell():New(oSection1,"CCODFILI"	,"","Filial"			  	,"@!"	  					,06,/*lPixel*/	,{|| cCodFili })
+TRCell():New(oSection1,"CPREFIX"	,"","Prefixo"			  	,"@!"	  					,03,/*lPixel*/	,{|| cPrefix })
+TRCell():New(oSection1,"CNUM"		,"","Numero"           		,"@!"						,09,/*lPixel*/	,{|| cNum })
+TRCell():New(oSection1,"CPARC"		,"","Parcela"          		,"@!"						,02,/*lPixel*/	,{|| cParc })
+TRCell():New(oSection1,"CFOP"		,"","CFOP"             		,"@!"						,04,/*lPixel*/	,{|| cCfop })
+TRCell():New(oSection1,"CTIPO"		,"","Tipo"          	  	,"@!"						,03,/*lPixel*/	,{|| cTipo })
+TRCell():New(oSection1,"CNATU"		,"","Natureza"      	  	,"@!"						,10,/*lPixel*/	,{|| cNaturez })
+TRCell():New(oSection1,"CBANCO"		,"","Portador"      	  	,"@!"						,03,/*lPixel*/	,{|| cBanco })
+TRCell():New(oSection1,"CCODCLIE"	,"","Cod. Cliente"     		,"@!"   					,20,/*lPixel*/	,{|| cCodClie })
+TRCell():New(oSection1,"CNOMCLIE"	,"","Nome Cliente"     		,"@!"   					,40,/*lPixel*/	,{|| cNomClie })
+TRCell():New(oSection1,"DEMISSAO"	,"","Emissao"	         	,"@!"	  					,10,/*lPixel*/	,{|| dEmissao })
+TRCell():New(oSection1,"CANOEMIS"	,"","Ano"	         	  	,"@!"	  					,10,/*lPixel*/	,{|| cAnoEmiss })
+TRCell():New(oSection1,"CMESEMIS"	,"","Mês"	         	  	,"@!"	  					,10,/*lPixel*/	,{|| cMesEmiss })
+
+TRCell():New(oSection1,"DVENCTO"	,"","Vencto"	         	,"@!"	  					,10,/*lPixel*/	,{|| dVencto })
+TRCell():New(oSection1,"DVREAL"		,"","VencReal"	      		,"@!"	  					,10,/*lPixel*/	,{|| dVReal })
+TRCell():New(oSection1,"NVALORIG"	,"","Vlr.Orig"	      		,"@!"	  					,15,/*lPixel*/	,{|| nValOrig })
+TRCell():New(oSection1,"NJUROS"		,"","Juros"	      	  		,"@!"	  					,15,/*lPixel*/	,{|| nJuros })
+TRCell():New(oSection1,"NMULTA"		,"","Multa"	         		,"@!"	  					,15,/*lPixel*/	,{|| nMulta })
+TRCell():New(oSection1,"NACRESC"	,"","Acrescimo"        		,"@!"	  					,15,/*lPixel*/	,{|| nAcresc })
+TRCell():New(oSection1,"NDCRESC"	,"","Decrescimo"       		,"@!"	  					,15,/*lPixel*/	,{|| nDecres })
+TRCell():New(oSection1,"DBAIXA"		,"","Baixa"		      		,"@!"	  					,10,/*lPixel*/	,{|| dBaixa })
+TRCell():New(oSection1,"NVAL"		,"","Valor Baixa"	  	  	,"@E 999,999,999.99"		,15,/*lPixel*/	,{|| nValor })
+TRCell():New(oSection1,"NDATR"		,"","Dias Atraso"	  	 	,"@E 99999"					,05,/*lPixel*/	,{|| nDiasAtr })
+TRCell():New(oSection1,"NRECPARC"	,"","Recebi.Parcial"  		,"@E 99999"					,15,/*lPixel*/	,{|| nRecParc })
+TRCell():New(oSection1,"NSALDO"		,"","Saldo"		  	 		,"@E 999,999,999.99"		,15,/*lPixel*/	,{|| nSaldo })
+TRCell():New(oSection1,"NRECANT"	,"","Recebi.Antecipado"  	,"@E 999,999,999.99"		,15,/*lPixel*/	,{|| nReAnte }) 
+TRCell():New(oSection1,"NRECDIA"	,"","Recebi.data"	  		,"@E 999,999,999.99"		,15,/*lPixel*/	,{|| nRecData }) 
+TRCell():New(oSection1,"N0130"		,"",">= 1 <= 30"  			,"@E 999,999,999.99"		,15,/*lPixel*/	,{|| n130 })
+TRCell():New(oSection1,"N3160"		,"",">= 31 < = 60"  		,"@E 999,999,999.99"		,15,/*lPixel*/	,{|| n3160 })
+TRCell():New(oSection1,"N6190"		,"",">= 61 < = 90"  		,"@E 999,999,999.99"		,15,/*lPixel*/	,{|| n6190 })
+TRCell():New(oSection1,"N91120"		,"",">= 91 < = 120" 	 	,"@E 999,999,999.99"		,15,/*lPixel*/	,{|| n91120 })
+TRCell():New(oSection1,"N120"		,"","Maior que 120"  		,"@E 999,999,999.99"		,15,/*lPixel*/	,{|| n120 })
+TRCell():New(oSection1,"NVENC"		,"","TÍtulos a vencer"  	,"@E 999,999,999.99"		,15,/*lPixel*/	,{|| nVencer })
+TRCell():New(oSection1,"NINAD"		,"","Inadimplentes"	  		,"@E 999,999,999.99"		,15,/*lPixel*/	,{|| nInadimp }) 
+TRCell():New(oSection1,"NPERCIN"	,"","% Inadimplencia"	  	,"@E 999,999,999.99"		,15,/*lPixel*/	,{|| nInadimple }) 
+
+Return(oReport)
+
+
+
+/*/
+ÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜ
+±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±
+±±ÚÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄ¿±±
+±±³Programa  ³ReportPrin³ Autor ³Davidson Clayton     ³ Data ³09.02.2016³±±
+±±ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄ´±±
+±±³Descri‡…o ³A funcao estatica ReportDef devera ser criada para todos os ³±±
+±±³          ³relatorios que poderao ser agendados pelo usuario.          ³±±
+±±³          ³                                                            ³±±
+±±ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´±±
+±±³Retorno   ³Nenhum                                                      ³±±
+±±ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´±±
+±±³Parametros³ExpO1: Objeto Report do Relatório                           ³±±
+±±³          ³                                                            ³±±
+±±ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´±±
+±±³   DATA   ³ Programador   ³Manutencao efetuada                         ³±±
+±±ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´±±
+±±³          ³               ³                                            ³±±
+±±ÀÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ±±
+±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±
+ßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßß
+/*/
+Static Function ReportPrint(oReport) //Static Function ReportPrint(oReport,cAlias)
+
+Local oSection1 	:= oReport:Section(1)
+Local oBreak
+Local oTotaliz
+Local nTxMoeda		:= 1
+Local lFirst    	:= .F.
+Local nRegTemp  	:= 0
+Local 	aFilsCalc  	:= {}
+Local 	aEmpresa   	:= {}
+Local 	lSelFil 	:= .T.//Iif(MV_PAR08==1,.T.,.F.)
+
+Private cSelFil		:= ""
+Private cFilt		:= ""
+
+
+
+MsAguarde({ ||FGrvTmp02(lSelFil) }, "Criando Arquivo de Trabalho...")  //-- Chamada da Funcao de Arquivo Temporarios
+
+
+oReport:SetTitle( oReport:Title()) // " - POR NUMERO"
+
+
+dbSelectArea("RNUTXY")
+dbSetOrder(01)
+dbGoTop()
+
+oReport:SetMeter( nRegTMP )
+oSection1:Init()
+
+
+While ! oReport:Cancel() .And. ! RNUTXY->( Eof() )
+	
+	
+	If oReport:Cancel()
+		
+		Exit
+		
+	EndIf
+	
+	oReport:IncMeter()
+	
+	oSection1:Cell("CCODFILI"):SetValue(RNUTXY->CODFILI)
+	oSection1:Cell("CPREFIX"):SetValue(RNUTXY->CPREFIX)
+	oSection1:Cell("CNUM"):SetValue(RNUTXY->CNUM)
+	oSection1:Cell("CPARC"):SetValue(RNUTXY->CPARC)
+	oSection1:Cell("CFOP"):SetValue(RNUTXY->CFOP)
+	oSection1:Cell("CTIPO"):SetValue(RNUTXY->CTIPO)
+	oSection1:Cell("CNATU"):SetValue(RNUTXY->CNATU)
+	oSection1:Cell("CBANCO"):SetValue(RNUTXY->CBANCO)
+	oSection1:Cell("CCODCLIE"):SetValue(RNUTXY->CCODCLIE)
+	oSection1:Cell("CNOMCLIE"):SetValue(RNUTXY->CNOMCLIE)
+	oSection1:Cell("DEMISSAO"):SetValue(RNUTXY->DEMISSAO)
+
+	oSection1:Cell("CANOEMIS"):SetValue(RNUTXY->CANOEMIS)
+	oSection1:Cell("CMESEMIS"):SetValue(RNUTXY->CMESEMIS)
+
+	oSection1:Cell("DVENCTO"):SetValue(RNUTXY->DVENCTO)
+	oSection1:Cell("DVREAL"):SetValue(RNUTXY->DVREAL)
+	oSection1:Cell("NVALORIG"):SetValue(RNUTXY->NVALORIG)
+	oSection1:Cell("NJUROS"):SetValue(RNUTXY->NJUROS)
+	oSection1:Cell("NMULTA"):SetValue(RNUTXY->NMULTA)
+	oSection1:Cell("NACRESC"):SetValue(RNUTXY->NACRESC)
+	oSection1:Cell("NDCRESC"):SetValue(RNUTXY->NDCRESC)
+	oSection1:Cell("DBAIXA"):SetValue(RNUTXY->DBAIXA)
+	oSection1:Cell("NVAL"):SetValue(RNUTXY->NVAL)
+	oSection1:Cell("NDATR"):SetValue(RNUTXY->NDATR)
+	oSection1:Cell("NRECPARC"):SetValue(RNUTXY->NRECPARC)
+	oSection1:Cell("NSALDO"):SetValue(RNUTXY->NSALDO)
+	oSection1:Cell("NRECANT"):SetValue(RNUTXY->NRECANT)	
+	oSection1:Cell("NRECDIA"):SetValue(RNUTXY->NRECDIA) //Pagamento em dia.  
+	oSection1:Cell("N0130"):SetValue(RNUTXY->N0130)
+	oSection1:Cell("N3160"):SetValue(RNUTXY->N3160)
+	oSection1:Cell("N6190"):SetValue(RNUTXY->N6190)	
+	oSection1:Cell("N120"):SetValue(RNUTXY->N120)
+	oSection1:Cell("NVENC"):SetValue(RNUTXY->NVENC)
+	oSection1:Cell("NINAD"):SetValue(RNUTXY->NINAD)    //Inadimplentes.  	 
+	oSection1:Cell("NPERCIN"):SetValue(RNUTXY->NPERCIN) //% de inadimplencia no titulo.
+
+	oSection1:PrintLine()
+	
+	dbSelectArea("RNUTXY")
+	RNUTXY->( dbSkip())
+	
+End
+
+//oSecTion1:Print()
+
+oSection1:Finish()
+
+dbSelectArea("RNUTXY")
+dbCloseArea()
+
+Return NIL
+
+
+/*/
+ÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜ
+±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±
+±±ÚÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄ¿±±
+±±³Programa  ³AjustaSX1 ³ Autor ³ Davidson Clayton     ³ Data ³09.02.2017³±±
+±±ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄ´±±
+±±³Descri‡…o ³Monta perguntas no SX1.                                     ³±±
+±±ÀÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ±±
+±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±
+ßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßß
+/*/
+Static Function AjustaSx1(cPerg)
+
+//--Tipo Filtro Emissao Nfe ou Pedido de vendas - Davidson 09/12/2016 
+//PutSx1(cPerg,"11","Filtra por  ?" ," "," "   ,"mv_ch10","N",1,0,1,"C","","","","","mv_par10","Entregues","Sí","Yes","","Não Entregues","No","No","Ambos","Ambos","Ambos","","","","","","")
+
+PutSx1(cPerg,"01","Emissao de  ?"     ," "," ","mv_ch1","D",8,0,0,"G","",""   ,,,"mv_par01")  //"ID do processo"
+PutSx1(cPerg,"02","Ate Emissao ?"     ," "," ","mv_ch2","D",8,0,0,"G","! Empty(Mv_Par02) .And. MV_PAR02 >= MV_PAR01",""   ,,,"mv_par02")  //"ID do processo"
+
+Return
+
+
+
+Static Function FGrvTmp02(lSelFil,lSelVen)
+*******************************************************************************
+*
+**
+Local cEol   		:= ""
+Local cQuery 		:= ""
+Local cFnoTa		:=""
+Local cQrySF2  		:= ""
+Local aStru  		:= {}
+Local cTipoRel 		:= 2
+Local aColunas 		:= {}
+Local cAliasSF2		:= GetNextAlias()
+Local cAliasSFT		:= GetNextAlias()
+Local nDiasAtraso	:=0
+Local nDiasAntecipa	:=0
+Local nDiasAberto   :=0
+Local nValorBaixa	:=0
+
+cQrySF2 := " SELECT * FROM "+RetSqlName("SF2")+" F2"
+cQrySF2 += " WHERE F2.D_E_L_E_T_ <> '*' "
+cQrySF2 += " AND F2.F2_FILIAL <> '0201' " 
+cQrySF2 += " AND F2.F2_EMISSAO BETWEEN '"+dToS(Mv_Par01) +"' AND '"+dToS(Mv_Par02)+"'"	
+
+cQrySF2 := ChangeQuery(cQrySF2)
+
+MemoWrite("RNUTF02.SQL",cQrySF2)
+
+MsAguarde({|| dbUseArea(.T.,"TOPCONN",TcGenQry(,,cQrySF2),cAliasSF2,.T.,.T.)},"Selecionando Registros NF..." ) //"Selecionando Registros..."
+
+
+aStru := {}
+
+
+aadd(aStru,{"CODFILI"	,"C" ,04 ,0})
+aadd(aStru,{"CPREFIX"	,"C" ,03 ,0})
+aadd(aStru,{"CNUM"		,"C" ,09 ,0})
+aadd(aStru,{"CPARC"		,"C" ,02 ,0})
+aadd(aStru,{"CFOP"		,"C" ,04 ,0})
+aadd(aStru,{"CTIPO"		,"C" ,03 ,0})
+aadd(aStru,{"CNATU"		,"C" ,10 ,0})
+aadd(aStru,{"CBANCO"	,"C" ,03 ,0})
+aadd(aStru,{"CCODCLIE"	,"C" ,20 ,0})
+aadd(aStru,{"CNOMCLIE"	,"C" ,40 ,0})
+aadd(aStru,{"DEMISSAO"	,"D" ,08 ,0})
+aadd(aStru,{"CANOEMIS"	,"C" ,04 ,0})
+aadd(aStru,{"CMESEMIS"	,"C" ,02 ,0})
+aadd(aStru,{"DVENCTO"	,"D" ,08 ,0})
+aadd(aStru,{"DVREAL"	,"D" ,08 ,0})
+aadd(aStru,{"NVALORIG"	,"N" ,16 ,2})
+aadd(aStru,{"NJUROS"	,"N" ,16 ,2})
+aadd(aStru,{"NMULTA"	,"N" ,16 ,2})
+aadd(aStru,{"NACRESC"	,"N" ,16 ,2})
+aadd(aStru,{"NDCRESC"	,"N" ,16 ,2})
+aadd(aStru,{"DBAIXA"	,"D" ,08 ,0})
+aadd(aStru,{"NVAL"		,"N" ,16 ,2})
+aadd(aStru,{"NDATR"		,"N" ,05 ,0})
+aadd(aStru,{"NRECPARC"	,"N" ,16 ,2})
+aadd(aStru,{"NSALDO"	,"N" ,16 ,2})
+aadd(aStru,{"NRECANT"	,"N" ,16 ,2})
+aadd(aStru,{"N0130"		,"N" ,16 ,2})
+aadd(aStru,{"N3160"		,"N" ,16 ,2})
+aadd(aStru,{"N6190"		,"N" ,16 ,2})
+aadd(aStru,{"N91120"	,"N" ,16 ,2})
+aadd(aStru,{"N120"		,"N" ,16 ,2})
+aadd(aStru,{"NVENC"		,"N" ,16 ,2})
+aadd(aStru,{"NRECDIA"	,"N" ,16 ,2})
+aadd(aStru,{"NINAD"		,"N" ,16 ,2})
+aadd(aStru,{"NPERCIN"	,"N" ,16 ,2})
+
+cArqTrab  := CriaTrab(aStru)
+//cIndTrb1 := Left(cArqTrab,7)+"A"
+
+dbUseArea(.T.,, cArqTrab, "RNUTXY", .F., .F. )
+
+IndRegua("RNUTXY",cArqTrab,"CODFILI",,,"Selecionando Registros...")
+
+dbSelectArea(cAliasSF2)
+dbGoTop()
+
+While !  (cAliasSF2)->( Eof())
+
+	dbSelectArea("SE1")
+	SE1->( dbSetOrder(1))
+	If SE1->(dbSeek((cAliasSF2)->(F2_FILIAL+F2_SERIE+F2_DOC)))//FILIAL+PREFIXO+NUMERO+PARCELA+TIPO
+		
+		While ! SE1->( Eof()).And. SE1->(E1_FILIAL+E1_PREFIXO+E1_NUM) ==  (cAliasSF2)->(F2_FILIAL+F2_SERIE+F2_DOC)
+		
+
+			//-Tratamento para não trazer outros Tipos somente NF e FT.
+			If  Alltrim(SE1->(E1_TIPO)) $ "NF" 
+			  
+				//--Tratamento da CFOPS de Vendas
+				cFnoTa	:= Alltrim(Posicione("SD2",3,(cAliasSF2)->(F2_FILIAL+F2_DOC+F2_SERIE),"D2_CF"))
+				If cFnoTa $ cFops
+				
+					nDiasAtraso		:= DateDiffDay( SE1->E1_VENCTO,SE1->E1_BAIXA)//nDiffDay ( Diferenca em dias entre duas datas
+					nDiasAberto		:= DateDiffDay(dDatabase,SE1->E1_VENCTO)	 //nDiffDay ( Diferenca em dias entre duas datas
+					nDiasAntecipa	:= DateDiffDay( SE1->E1_BAIXA,SE1->E1_VENCTO) 
+					nValorBaixa		:= SE1->E1_VALOR-SE1->E1_SALDO
+						
+					dbSelectArea("RNUTXY")
+					RecLock("RNUTXY",.T.)
+					
+					Replace CODFILI		With SE1->E1_FILIAL
+					Replace CPREFIX		With SE1->E1_PREFIXO
+					Replace CNUM		With SE1->E1_NUM
+					Replace CPARC		With SE1->E1_PARCELA
+					Replace CFOP		With cFnoTa	 //CFOP  
+					Replace CTIPO		With SE1->E1_TIPO
+					Replace CNATU		With SE1->E1_NATUREZ
+					Replace CBANCO		With SE1->E1_PORTADO
+					Replace CCODCLIE	With SE1->E1_CLIENTE
+					Replace CNOMCLIE	With Posicione("SA1",1,xFilial("SA1")+SE1->E1_CLIENTE+SE1->E1_LOJA,"A1_NOME")//NOME DO CLIENTE
+					Replace DEMISSAO	With SE1->E1_EMISSAO //Stod((cAliasSF2)->F2_EMISSAO)
+					Replace CANOEMIS	With Substr(Dtos(SE1->E1_EMISSAO),1,4)//ANO DE EMISSAO
+					Replace CMESEMIS	With Substr(Dtos(SE1->E1_EMISSAO),5,2)//MES DE EMISSAO
+					
+					Replace DVENCTO		With SE1->E1_VENCTO   				//Data de  vencimento
+					Replace DVREAL		With SE1->E1_VENCREA  				//Data do vencimento real.
+					Replace NVALORIG 	With SE1->E1_VALOR    				//Valor Original
+					Replace NJUROS		With SE1->E1_JUROS    				//Valor do juros
+					Replace NMULTA		With SE1->E1_MULTA    				//Valor da multa aplicada.
+					Replace NACRESC		With SE1->E1_ACRESC   				//Valor do acrescimo
+					Replace NDCRESC		With SE1->E1_DECRESC  				//Valor do decrescimo
+					Replace DBAIXA		With SE1->E1_BAIXA    				//Data da baixa.
+					Replace NVAL		With SE1->E1_VALOR-SE1->E1_SALDO  	//  Valor da baixa.
+					Replace NSALDO		With SE1->E1_SALDO  				//Saldo
+								
+					//--Tratamento para calculo de dias do vencimento.
+					If !Empty(SE1->E1_BAIXA)                                  
+		
+						//--Tratamento para pagamento em dia. 
+					    If SE1->E1_BAIXA == SE1->E1_VENCTO
+					         
+						    Replace NDATR		With 0			                      
+						    Replace NRECANT		With 0	//Recebimento antecipado
+							Replace NRECDIA		With nValorBaixa //Pagamento na data.
+							Replace N0130		With 0
+							Replace N3160		With 0
+							Replace N6190		With 0
+							Replace N91120		With 0
+							Replace N120		With 0
+							Replace NVENC		With 0
+			 			
+					    EndIf
+						
+						//--Tratamento para pagagmento parcial 
+					    If SE1->E1_SALDO > 0
+					         
+						    Replace NRECPARC	With SE1->E1_VALOR-SE1->E1_SALDO //Recebimento parcial 		
+						    Replace NINAD		With SE1->E1_SALDO 				//Inadimplentes 
+					    EndIf
+						
+						
+						//--Tratamento para pagamento antecipado.
+						If SE1->E1_BAIXA < SE1->E1_VENCTO
+						
+							Replace NDATR		With nDiasAntecipa	//Pagamento antecipado
+							Replace NRECANT		With nValorBaixa	//Recebimento antecipado
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100
+							Replace N0130		With 0
+							Replace N3160		With 0
+							Replace N6190		With 0
+							Replace N91120		With 0
+							Replace N120		With 0
+							Replace NVENC		With 0
+			
+						//-Tratamento para pagamento em atraso
+						//--Tratamento >= 1 <= 30 dias
+						ElseIf nDiasAtraso >= 1  .And. nDiasAtraso <= 30 
+						
+							Replace N0130		With nValorBaixa	      	
+							Replace NDATR		With nDiasAtraso	
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100	
+					
+						//--Tratamento >= 31 <= 60 dias
+						ElseIf nDiasAtraso >= 31  .And. nDiasAtraso <= 60
+						
+							Replace N3160		With nValorBaixa 
+							Replace NDATR		With nDiasAtraso            					
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100	
+		
+						//--Tratamento >= 61 <= 90 dias
+						ElseIf nDiasAtraso >= 61  .And. nDiasAtraso <= 90
+						
+							Replace N6190		With nValorBaixa
+							Replace NDATR		With nDiasAtraso								
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100	
+						
+						//--Tratamento >= 91 <= 120 dias
+						ElseIf nDiasAtraso >= 91  .And. nDiasAtraso <= 120
+						
+							Replace N91120		With nValorBaixa
+							Replace NDATR		With nDiasAtraso								
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100	
+		
+						//--Tratamento > 120 dias 
+						ElseIf nDiasAtraso > 120
+								
+							Replace N120		With nValorBaixa
+							Replace NDATR		With nDiasAtraso			
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100	
+						
+						EndIf
+					
+					//--Tratamento para a vencer.						
+					ElseIf SE1->E1_VENCTO >= dDatabase 
+					 
+						Replace NVENC		With SE1->E1_VALOR					
+						Replace NSALDO		With SE1->E1_SALDO  //Saldo					
+						
+						//--Tratamento 0 dias 
+	//					If SE1->E1_SALDO == SE1->E1_VALOR
+					                     
+	//						Replace NSALDO		With 0  //Saldo
+	//					EndIf 			
+//--------------------------------------------------------
+//--------------------------------------------------------				
+//--Tratamento para não baixados e vencidos					
+					//--Tratamento >= 1 <= 30 dias
+					ElseIf nDiasAberto >= 1  .And. nDiasAberto <= 30 
+					
+			   /*		Replace N0130		With SE1->E1_VALOR	
+			  			Replace NDATR		With nDiasAberto  */
+						Replace NSALDO		With SE1->E1_SALDO  //Saldo					
+					    Replace NINAD		With SE1->E1_SALDO 				//Inadimplentes
+						Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100  //% Percentual
+					
+					//--Tratamento >= 31 <= 60 dias
+					ElseIf nDiasAberto >= 31  .And. nDiasAberto <= 60
+				 /*						
+					 	Replace N3160		With SE1->E1_VALOR             
+					 	Replace NDATR		With nDiasAberto  	*/
+						Replace NSALDO		With SE1->E1_SALDO  //Saldo				 	
+					 	Replace NINAD		With SE1->E1_SALDO 				//Inadimplentes
+						Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100  //% Percentual
+						
+					//--Tratamento >= 61 <= 90 dias
+					ElseIf nDiasAberto >= 61  .And. nDiasAberto <= 90
+					
+					/*
+						Replace N6190		With SE1->E1_VALOR
+						Replace NDATR		With nDiasAberto	*/
+						Replace NSALDO		With SE1->E1_SALDO  //Saldo
+						Replace NINAD		With SE1->E1_SALDO 				//Inadimplentes
+						Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100  //% Percentual
+					
+					//--Tratamento >= 91 <= 120 dias
+					ElseIf nDiasAberto >= 91  .And. nDiasAberto <= 120
+					 /*
+						Replace N91120		With SE1->E1_VALOR
+						Replace NDATR		With nDiasAberto   */
+						Replace NSALDO		With SE1->E1_SALDO  //Saldo					
+						Replace NINAD		With SE1->E1_SALDO 				//Inadimplentes
+						Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100  //% Percentual							
+					
+					//--Tratamento > 120 dias 
+					ElseIf nDiasAberto > 120
+					/*		
+						Replace N120		With SE1->E1_VALOR
+						Replace NDATR		With nDiasAberto  */
+						Replace NSALDO		With SE1->E1_SALDO  //Saldo
+						Replace NINAD		With SE1->E1_SALDO 				//Inadimplentes
+						Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100  //% Percentual
+												 				
+					EndIf				
+					MsUnLock()
+				EndIf
+			EndIf
+		nRegTMP++ 
+		dbSelectARea("SE1")
+		SE1->( dbSkip())
+		End	
+	EndIf
+	
+dbSelectArea(cAliasSF2)	
+(cAliasSF2)->( dbSkip())	
+EndDo
+
+dbSelectArea(cAliasSF2)
+dbCloseArea()
+
+//Tratamemto para FT 
+
+cQrySFT := " SELECT * FROM "+RetSqlName("SE1")+" E1"
+cQrySFT += " WHERE E1.D_E_L_E_T_ <> '*' "
+cQrySFT += " AND E1.E1_FILIAL <> '0201' "    
+cQrySFT += " AND E1.E1_TIPO = 'FT' " 
+cQrySFT += " AND E1.E1_VENCTO BETWEEN '"+dToS(Mv_Par01) +"' AND '"+dToS(Mv_Par02)+"'"	
+
+cQrySFT := ChangeQuery(cQrySFT)
+
+MemoWrite("RNUTF04.SQL",cQrySFT)
+
+MsAguarde({|| dbUseArea(.T.,"TOPCONN",TcGenQry(,,cQrySFT),cAliasSFT,.T.,.T.)},"Selecionando Registros FT..." ) //"Selecionando Registros..."
+
+dbSelectArea(cAliasSFT)
+dbGoTop()
+
+While !  (cAliasSFT)->( Eof())
+
+	dbSelectArea("SE1")
+	SE1->( dbSetOrder(1))
+	If SE1->(dbSeek((cAliasSFT)->(E1_FILIAL+E1_PREFIXO+E1_NUM+E1_PARCELA+E1_TIPO)))//FILIAL+PREFIXO+NUMERO+PARCELA+TIPO
+		
+		While ! SE1->( Eof()).And. SE1->(E1_FILIAL+E1_PREFIXO+E1_NUM+E1_PARCELA+E1_TIPO) ==  (cAliasSFT)->(E1_FILIAL+E1_PREFIXO+E1_NUM+E1_PARCELA+E1_TIPO)
+		
+
+			//-Tratamento para não trazer outros Tipos somente NF e FT.
+			If  Alltrim(SE1->(E1_TIPO)) $ "FT" 
+				
+					nDiasAtraso		:= DateDiffDay( SE1->E1_VENCTO,SE1->E1_BAIXA)//nDiffDay ( Diferenca em dias entre duas datas
+					nDiasAberto		:= DateDiffDay(dDatabase,SE1->E1_VENCTO)	 //nDiffDay ( Diferenca em dias entre duas datas
+					nDiasAntecipa	:= DateDiffDay( SE1->E1_BAIXA,SE1->E1_VENCTO) 
+					nValorBaixa		:= SE1->E1_VALOR-SE1->E1_SALDO
+						
+					dbSelectArea("RNUTXY")
+					RecLock("RNUTXY",.T.)
+					
+					Replace CODFILI		With SE1->E1_FILIAL
+					Replace CPREFIX		With SE1->E1_PREFIXO
+					Replace CNUM		With SE1->E1_NUM
+					Replace CPARC		With SE1->E1_PARCELA
+					Replace CFOP		With cFnoTa	 //CFOP  
+					Replace CTIPO		With SE1->E1_TIPO
+					Replace CNATU		With SE1->E1_NATUREZ
+					Replace CBANCO		With SE1->E1_PORTADO
+					Replace CCODCLIE	With SE1->E1_CLIENTE
+					Replace CNOMCLIE	With Posicione("SA1",1,xFilial("SA1")+SE1->E1_CLIENTE+SE1->E1_LOJA,"A1_NOME")//NOME DO CLIENTE
+					Replace DEMISSAO	With SE1->E1_EMISSAO //Stod((cAliasSF2)->F2_EMISSAO)
+					Replace CANOEMIS	With Substr(Dtos(SE1->E1_EMISSAO),1,4)//ANO DE EMISSAO
+					Replace CMESEMIS	With Substr(Dtos(SE1->E1_EMISSAO),5,2)//MES DE EMISSAO
+					
+					Replace DVENCTO		With SE1->E1_VENCTO   				//Data de  vencimento
+					Replace DVREAL		With SE1->E1_VENCREA  				//Data do vencimento real.
+					Replace NVALORIG 	With SE1->E1_VALOR    				//Valor Original
+					Replace NJUROS		With SE1->E1_JUROS    				//Valor do juros
+					Replace NMULTA		With SE1->E1_MULTA    				//Valor da multa aplicada.
+					Replace NACRESC		With SE1->E1_ACRESC   				//Valor do acrescimo
+					Replace NDCRESC		With SE1->E1_DECRESC  				//Valor do decrescimo
+					Replace DBAIXA		With SE1->E1_BAIXA    				//Data da baixa.
+					Replace NVAL		With SE1->E1_VALOR-SE1->E1_SALDO  	//  Valor da baixa.
+					Replace NSALDO		With SE1->E1_SALDO  				//Saldo
+								
+					//--Tratamento para calculo de dias do vencimento.
+					If !Empty(SE1->E1_BAIXA)                                  
+		
+						//--Tratamento para pagamento em dia. 
+					    If SE1->E1_BAIXA == SE1->E1_VENCTO
+					         
+						    Replace NDATR		With 0			                      
+						    Replace NRECANT		With 0	//Recebimento antecipado
+							Replace NRECDIA		With nValorBaixa //Pagamento na data.
+							Replace N0130		With 0
+							Replace N3160		With 0
+							Replace N6190		With 0
+							Replace N91120		With 0
+							Replace N120		With 0
+							Replace NVENC		With 0
+			 			
+					    EndIf
+						
+						//--Tratamento para pagagmento parcial 
+					    If SE1->E1_SALDO > 0
+					         
+						    Replace NRECPARC	With SE1->E1_VALOR-SE1->E1_SALDO //Recebimento parcial 			
+						    Replace NINAD		With SE1->E1_SALDO
+					    EndIf
+						
+						
+						//--Tratamento para pagamento antecipado.
+						If SE1->E1_BAIXA < SE1->E1_VENCTO
+						
+							Replace NDATR		With nDiasAntecipa	//Pagamento antecipado
+							Replace NRECANT		With nValorBaixa	//Recebimento antecipado
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100
+							Replace N0130		With 0
+							Replace N3160		With 0
+							Replace N6190		With 0
+							Replace N91120		With 0
+							Replace N120		With 0
+							Replace NVENC		With 0
+			
+						//-Tratamento para pagamento em atraso
+						//--Tratamento >= 1 <= 30 dias
+						ElseIf nDiasAtraso >= 1  .And. nDiasAtraso <= 30 
+						
+							Replace N0130		With nValorBaixa	      	
+							Replace NDATR		With nDiasAtraso	
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100	
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100  //% Percentual
+
+						//--Tratamento >= 31 <= 60 dias
+						ElseIf nDiasAtraso >= 31  .And. nDiasAtraso <= 60
+						
+							Replace N3160		With nValorBaixa 
+							Replace NDATR		With nDiasAtraso            					
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100	
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100  //% Percentual
+		
+						//--Tratamento >= 61 <= 90 dias
+						ElseIf nDiasAtraso >= 61  .And. nDiasAtraso <= 90
+						
+							Replace N6190		With nValorBaixa
+							Replace NDATR		With nDiasAtraso								
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100	
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100  //% Percentual
+					
+						//--Tratamento >= 91 <= 120 dias
+						ElseIf nDiasAtraso >= 91  .And. nDiasAtraso <= 120
+						
+							Replace N91120		With nValorBaixa
+							Replace NDATR		With nDiasAtraso								
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100	
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100  //% Percentual
+			
+						//--Tratamento > 120 dias 
+						ElseIf nDiasAtraso > 120
+								
+							Replace N120		With nValorBaixa
+							Replace NDATR		With nDiasAtraso			
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100	
+							Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100  //% Percentual
+				
+						EndIf
+					
+					//--Tratamento para a vencer.						
+					ElseIf SE1->E1_VENCTO >= dDatabase 
+					 
+						Replace NVENC		With SE1->E1_VALOR					
+						Replace NSALDO		With SE1->E1_SALDO  //Saldo	 			
+
+//------------------------------------------
+//--------------------------------------------					
+//--Tratamento para não baixados e vencidos					
+					//--Tratamento >= 1 <= 30 dias
+					ElseIf nDiasAberto >= 1  .And. nDiasAberto <= 30 
+					/*
+						Replace N0130		With SE1->E1_VALOR	
+						Replace NDATR		With nDiasAberto  */
+						Replace NSALDO		With SE1->E1_SALDO  //Saldo					
+						Replace NINAD		With SE1->E1_SALDO 				//Inadimplentes
+					
+					//--Tratamento >= 31 <= 60 dias
+					ElseIf nDiasAberto >= 31  .And. nDiasAberto <= 60
+					/*
+					 	Replace N3160		With SE1->E1_VALOR             
+					 	Replace NDATR		With nDiasAberto */
+						Replace NSALDO		With SE1->E1_SALDO  //Saldo				 	
+					 	Replace NINAD		With SE1->E1_SALDO 				//Inadimplentes
+						Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100  //% Percentual
+				
+					//--Tratamento >= 61 <= 90 dias
+					ElseIf nDiasAberto >= 61  .And. nDiasAberto <= 90
+					/*
+						Replace N6190		With SE1->E1_VALOR
+						Replace NDATR		With nDiasAberto  */
+						Replace NSALDO		With SE1->E1_SALDO  //Saldo
+						Replace NINAD		With SE1->E1_SALDO 				//Inadimplentes
+						Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100  //% Percentual
+	
+					//--Tratamento >= 91 <= 120 dias
+					ElseIf nDiasAberto >= 91  .And. nDiasAberto <= 120
+					/*
+						Replace N91120		With SE1->E1_VALOR
+						Replace NDATR		With nDiasAberto  */
+						Replace NSALDO		With SE1->E1_SALDO  //Saldo					
+						Replace NINAD		With SE1->E1_SALDO 				//Inadimplentes
+						Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100  //% Percentual
+					
+					//--Tratamento > 120 dias 
+					ElseIf nDiasAberto > 120
+					/*		
+						Replace N120		With SE1->E1_VALOR
+						Replace NDATR		With nDiasAberto */
+						Replace NSALDO		With SE1->E1_SALDO  //Saldo
+						Replace NINAD		With SE1->E1_SALDO 				//Inadimplentes
+						Replace NPERCIN		With (SE1->E1_SALDO/SE1->E1_VALOR)*100  //% Percentual
+					EndIf				
+					MsUnLock()
+				EndIf
+		nRegTMP++ 
+		dbSelectARea("SE1")
+		SE1->( dbSkip())
+		End	
+	EndIf
+	
+dbSelectArea(cAliasSFT)	
+(cAliasSFT)->( dbSkip())	
+EndDo
+
+dbSelectArea(cAliasSFT)
+dbCloseArea()
+
+
+dbSelectArea("RNUTXY")
+dbSetOrder(1)
+dbGoTop()
+
+Return

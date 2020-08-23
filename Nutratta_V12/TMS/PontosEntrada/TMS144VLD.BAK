@@ -1,0 +1,12 @@
+
+//Excluido do RPO em 28/06/2017. pois não estava permitindo excluir Cte de dentro da viagem  
+
+User Function TMS144VLD() 
+Local lRet  := .T.
+Local nOpcx := PARAMIXB[1]
+If nOpcx == 4           
+	lRet:= .F.
+	MsgAlert('Não é permitido alterar esta viagem', 'Atenção')
+Endif   
+Return lRet         
+

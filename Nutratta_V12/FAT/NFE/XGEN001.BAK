@@ -1,0 +1,87 @@
+#Include "Rwmake.ch"
+#Include "Colors.ch"
+#Include "Topconn.ch"
+#Include "Protheus.ch"               
+//-------------------------------------------------------------------
+/*/{Protheus.doc} XGEN001
+Reiniciar serviço TSS no servidor Nutratta.
+@author 	Davidson-P2P
+@since 		26/09/2016.
+@version 	P11 R8   
+/*/
+//-------------------------------------------------------------------
+
+User Function XGEN001()
+
+Local cTitulo 	:= "Serviço Transmissor de NFe"
+Local cMens		:= "Confirma a Reinicialização do serviço de transmissão de Nota Fiscal Eletrônica?"
+Local cRet		:= ""
+Local nCnt		:= 0
+
+If Aviso(cTitulo,cMens,{"Confirmar","Abandonar"},2) == 1
+    
+	//Obtém as informações dos usuários logados
+	aInfo := GetUserInfoArray()
+
+	//Busca no array se algum usuário está utilizando as rotinas SPEDNFE e FISA022 	
+	For nI := 1 to Len(aInfo)
+
+		If Substr(aInfo[nI][11],at("Obj",aInfo[nI][11])+5,7) $ ("SPEDNFE/FISA022")
+
+           cRet += IIf(Len(cRet) > 1,",","") + Alltrim(Substr(aInfo[nI][11],at("Logged",aInfo[nI][11])+8,24))
+
+           nCnt++
+
+		EndIf
+
+	Next nI
+	
+	//Se algum usuário estiver utilizando as rotinas, mostra um aviso e não permite o reinicio
+	If Len(cRet) > 1
+	
+		cMens := IIf(nCnt > 1,"Os usuários "+Upper(cRet)+" estão ","O usuário "+Upper(cRet)+" está ")
+		cMens += "utilizando o serviço de transmissão de Nota Fiscal Eletrônica, portanto, o mesmo não poderá ser reiniciado!"
+		
+		Aviso("Não Permitido!",cMens,{"Ok"},2)
+	
+	Else
+		Processa({||fReinicia(),OemToAnsi('Aguarde...')},OemToAnsi('Reiniciando o Serviço...'))	
+		
+	EndIf
+
+EndIf
+
+Return
+
+
+Static Function fReinicia()
+*********************************
+** Interrompe o serviço do TSS **
+*********************************
+ProcRegua(2) 
+
+IncProc("Encerrando o serviço")
+
+//Interrompe e inicia o serviço, em caso de algum erro, informa ao usuário
+//  WaitRunSrv( 'net stop "_TOTVS | NUT_CTB4"' , .T. , "E:\NUT_CTB4\bin\appserver\"  )      
+If 	WaitRunSrv( 'net stop "_TOTVS | NUT | TSS"' , .T. , "E:\NUT_P11OFC\totvssped\bin\appserver\")
+	WaitRunSrv( 'net stop "_TOTVS | NUT | TSS"' , .T. , "E:\NUT_P11OFC\totvssped\bin\appserver\")
+	
+	IncProc("Iniciando o serviço TSS")
+
+//     WaitRunSrv( 'net start "_TOTVS | NUT_CTB4"' , .T. ,"E:\NUT_CTB4\bin\appserver\"  )
+//															 E:\NUT_P11OFC\totvssped\bin\appserver\appserver.exe															 
+	If WaitRunSrv( 'net start "_TOTVS | NUT | TSS"'  , .T. ,"E:\NUT_P11OFC\totvssped\bin\appserver\") 
+	   WaitRunSrv( 'net start "_TOTVS | NUT | TSS"'  , .T. ,"E:\NUT_P11OFC\totvssped\bin\appserver\")  
+		
+		MsgInfo("Serviço reiniciado com sucesso!!")
+	
+	Else
+		MsgStop("O serviço não pode ser iniciado!!")	
+	EndIf
+Else
+	MsgStop("O serviço não pode ser encerrado!!")	
+EndIf
+
+Return
+

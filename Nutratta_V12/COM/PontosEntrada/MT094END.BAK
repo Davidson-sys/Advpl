@@ -1,0 +1,35 @@
+#INCLUDE "PROTHEUS.CH"
+#INCLUDE "RWMAKE.CH"
+#INCLUDE "TOPCONN.CH"
+
+//-------------------------------------------------------------------
+/*/{Protheus.doc} MT094END
+Este Ponto de Entrada é executado antes da conclusão do tipo de operação 
+que está em andamento (Liberar o Documento, Transferência do Documento, 
+Transferência para Superior)
+
+http://tdn.totvs.com/display/public/PROT/TUMXYE_DT_PONTO_ENTRADA_MT094END
+
+@author 	Davidson Clayton - Nutratta
+@since 		31/05/2018.
+@version 	P11 R8
+@param   	n/t
+@return  	n/t
+@obs
+Exclusivo para Nutratta
+/*/
+//-------------------------------------------------------------------
+User Function MT094END()
+
+Local _cDoc			:=PARAMIXB[1]	//Caracter	Número do Documento	X
+Local _cTpDoc	 	:=PARAMIXB[2]	//Caracter	Tipo do documento (PC, NF, SA, IP, AE)	X
+Local _nOpc			:=PARAMIXB[3]	//Numérico	Operação a ser executada (1-Aprovar, 2-Estornar, 3-Aprovar pelo Superior, 4-Transferir para Superior, 5-Rejeitar, 6-Bloquear)	X
+Local _cFilDoc		:=PARAMIXB[4]	//Caracter	Filial do documento   
+ 
+
+
+      
+
+
+Return
+

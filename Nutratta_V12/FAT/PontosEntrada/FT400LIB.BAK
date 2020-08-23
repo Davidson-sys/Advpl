@@ -1,0 +1,53 @@
+#INCLUDE "PROTHEUS.CH"
+#INCLUDE "RWMAKE.CH"
+#INCLUDE "TOPCONN.CH"
+
+//--------------------------------------------------------------------------
+/* {Protheus.doc} FT400LIB
+Este Ponto de Entrada é executado no fim da gravação do Pedido de Venda 
+por contrato de parceria.
+
+Empresa - Copyright - P2P Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 09/09/2016
+@version P11 R8   
+
+@return Logico (.T. ou .F.)
+*/
+//--------------------------------------------------------------------------
+User Function FT400LIB()
+                   
+Local cContrat	:=ADA->ADA_NUMCTR
+Local cCliente	:=ADA->ADA_CODCLI
+Local cLoja		:=ADA->ADA_LOJCLI 
+Local cCondpgto	:=ADA->ADA_CONDPG
+Local cTabela	:=ADA->ADA_TABELA
+Local cTipLib	:=ADA->ADA_TIPLIB
+Local cStatus   :=ADA->ADA_STATUS
+Local nTipo 	:= ParamIxb	//Tipo do contrato(1=Aprovacao / 2=Remessa)        
+Local lRet		:=.T. 
+              
+
+If	nTipo==2 //Remessa
+	
+	//--Verifica se existe saldo a distribuir para o contrato.
+	dbSelectArea("ADB")
+	ADB->(dbGotop())
+	While ADB->(!Eof())
+		
+		If  ADB->ADB_NUMCTR == cContrat  .And. ADB->ADB_CODCLI == cCliente .And. ADB->ADB_LOJCLI ==  cLoja //.And.  ADB->ADB_CODPRO
+			
+			If ADB->ADB_QUANT <> ADB->ADB_QTDEMP //Parcialmente atendido/Existe saldo a consumir no contrato.				
+				
+				Aviso("Nutratta","Existem saldos a distribuir para o contrato.",{"Distribuir"},2,"Contrato: "+ADB->ADB_NUMCTR)
+			
+				//--Executa a chamada da janela para nova remessa.
+				Ft400Pv(ADB->ADB_NUMCTR,2)
+				Exit
+			EndIf
+		EndIf
+		ADB->(dbSkip())
+	EndDo
+EndIf
+
+Return(lRet)

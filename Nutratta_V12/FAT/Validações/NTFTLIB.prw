@@ -1,0 +1,345 @@
+#include 'protheus.ch'
+#include 'parmtype.ch'
+
+/*/
+{Protheus.doc} NTFTVL01
+Validação do Processo de Frete.
+Campos: C5_FRETE 
+		C6_QTD
+
+@author Davis Magalhães
+@since  27/04/2016
+@version 1.0 
+
+@param  N/H
+
+@return Logico (.T. ou .F.)
+/*/
+
+User function NTFTVL01(cCampo)
+
+Local aAreaVld		:= GetArea()
+Local nVLFrete		:= M->C5_FRETE
+Local nPosQtd  		:= aScan(aHeader,{|x| AllTrim(x[2])=="C6_QTDVEN"})
+Local nPosPrd 		:= aScan(aHeader,{|x| AllTrim(x[2])=="C6_PRODUTO"})
+Local nPosUM 		:= aScan(aHeader,{|x| AllTrim(x[2])=="C6_UM"})
+Local nPosFrI 		:= aScan(aHeader,{|x| AllTrim(x[2])=="C6_C_FRETE"})
+Local nXy 			:= 0
+Local nQtdTotal		:= 0  
+Local nVlFrtItem    := 0
+Local nLinha		:= 0 //oGetPv:oBrowse:nAt
+Local cTipo			:= M->C5_TIPO
+
+If cTipo <> "N"
+	RestArea(aAreaVld)
+	Return(lRet)
+EndIf
+
+
+IF nVlFrete == 0
+	RestArea(aAreaVld)
+    Return(.T.)
+EndIf
+
+If cCampo == "C5_FRETE"
+	
+//	mSGsTOP("eNTREI NA Condicao")
+//	MsgStop("Numero de Acols: "+Str(Len(aCols)))
+	
+	For nXy := 1 To Len(aCols)
+		
+	//	mSGsTOP("Dentro do FOR")	
+				
+		If ! GdDeleted(nXy)
+		
+			//MsGStop("Nao esta Deletado")
+			
+			If aCols[nXy][nPosUM] == "KG"
+				nQtdTotal += aCols[nXy][nPosQtd]
+		  	Else
+		  		nQtdTotal += Round((aCols[nXy][nPosQtd] * 1000),3)
+			EndIf
+		EndIf
+		//MsgStop("Variavel nQtdTotal: "+Str(nQtdTotal) )
+	Next Nxy
+
+	If nQtdTotal > 0
+	
+		nVlFrtItem := Round((nVlFrete / nQtdTotal),2)
+		
+		//MsgStop("Variavel nVlFrtItem: "+Str(nVlFrtItem) )
+		For nXy := 1 To Len(aCols)
+			
+			If ! GdDeleted(nXy)
+				If aCols[nXy][nPosUM] == "KG"
+					GdFieldPut("C6_C_FRETE",Round((aCols[nXy][nPosQtd] * nVlFrtItem),2), nXy)
+				Else
+					GdFieldPut("C6_C_FRETE",Round(((aCols[nXy][nPosQtd] * 1000)  * nVlFrtItem),2),nXy)
+				EndIf
+			EndIf
+			
+		Next nXy
+		
+	EndIf
+	
+EndIF  
+
+
+RestArea(aAreaVld)	
+Return(.T.)
+
+
+/*/
+{Protheus.doc} NTFTVL02
+Validação do Produto se Existe na Tabela de Frete.
+ 
+@author Davis Magalhães
+@since  27/04/2016
+@version 1.0 
+
+@param  N/H
+
+@return Logico (.T. ou .F.)
+/*/
+
+User function NTFTVL02()
+
+Local aAreaPRd	:= GetArea()
+Local cTabela	:= M->C5_TABELA 
+Local cCondpgt	:= M->C5_CONDPAG
+Local nPosPrd 	:= aScan(aHeader,{|x| AllTrim(x[2])=="C6_PRODUTO"})
+Local cCodPrd	:= Padr(M->C6_PRODUTO,15,'')					   
+Local cContrat	:= GDFieldGet("C6_CONTRAT",1) 
+Local cCodCli	:= Padr(M->C5_CLIENTE,08,'') 
+Local cCodLoj	:= Padr(M->C5_LOJACLI,04,'') 				
+Local cTipo		:= M->C5_TIPO
+Local cGrupo	:= Posicione("SB1",1,xFilial("SB1")+cCodPrd,"B1_GRUPO") 
+Local cFil		:= Padr(SM0->M0_CODFIL,04,'') 
+Local lRet		:= .T.  
+
+/*
+Validação para não permitir incluir 
+um produto que nao pertença ao contrato. 
+Davidson-15/09/2016.
+*/   
+//--Espeficido para --0101-Matriz e 
+If !Empty(cContrat)
+	dbSelectArea("ADB")					                                                                                                             
+	ADB->(DbOrderNickName("N_CONTRAT")) //ADB_FILIAL+ADB_NUMCTR+ADB_CODCLI+ADB_LOJCLI+ADB_CODPRO
+	If !MsSeek(cFil+cContrat+cCodCli+cCodLoj+cCodPrd)
+		
+		Aviso("Nutratta","O código do produto informado não pertence ao contrato de parceria.",{"Voltar"},2,"Contrato: "+cContrat)
+		lRet:=.F.
+	EndIf
+EndIf        
+
+
+If lRet
+	If cTipo <> "N"
+		RestArea(aAreaPRD)
+		Return(lRet)
+	EndIf
+    
+	//--------------------------------------------------------------------------------
+	// Ignorar tabela de preço caso o produto nao seja produto acabado.
+	//--------------------------------------------------------------------------------
+	If Alltrim(cGrupo) $ '2000'  
+		
+		//Caso a condição esteja vazia nao permitir prosseguir.
+		If Empty(cCondpgt)
+			Aviso("Nutratta","Favor Preencher a condição de pagamento antes da Digitação do Produto.",{"Voltar"},2,"Validação de condição de pagamento.")
+			RestArea(aAreaPrd)
+			lRet := .F.
+		EndIf
+		
+        //Valida preenchimento da tabela de preço.
+		If lRet
+			If Empty(cTabela)
+				Aviso("Nutratta","Favor Preencher a Tabela de Preço antes da Digitação do Produto.",{"Voltar"},2,"Validação de Tabela")
+				RestArea(aAreaPrd)
+				lRet := .F.
+			EndIf
+		EndIf
+		
+		//Busca a tabela de preço.
+		If lRet
+			dbSelectArea("DA1")
+			DA1->( dbSetOrder(1) )
+			If !DA1->( dbSeek(xFilial("DA1")+cTabela+cCodPrd) )
+				
+				Aviso("Nutratta","Produto não Encontrado na Tabela de Preço. Favor Cadastra-lo ou escolher outro produto",{"Voltar"},2,"Tabela: "+cTabela)
+				lRet := .F.
+			EndIf
+		EndIf
+	EndIf
+EndIf
+
+RestArea(aAreaPrd)
+
+Return(lRet)
+
+
+
+/*/
+{Protheus.doc} NTFTVL03
+Validação do Produto se Existe na Tabela de Frete.
+ 
+@author Davis Magalhães
+@since  27/04/2016
+@version 1.0 
+
+@param  N/H
+
+@return Logico (.T. ou .F.)
+/*/
+
+User function NTFTVL03(cCampo)
+
+Local aAreaPrc		:= GetArea()
+Local cTabela		:= M->C5_TABELA
+Local cCodPrd		:= GdFieldGet("C6_PRODUTO",n)
+Local nValDig		:= 0
+Local lRet			:= .T.
+Local cTipo		   := M->C5_TIPO
+Local nValTab		:= 0
+Local cUsuDesc	:= SuperGetMv("NT_USUDESC",.F.,"000000")
+Local cCodUsr 	:= RetCodUsr()
+
+
+
+If cTipo <> "N"
+	RestArea(aAreaPrc)
+	Return(lRet)
+EndIf
+
+dbSelectArea("DA1")
+DA1->( dbSetOrder(1) )
+If DA1->( dbSeek(xFilial("DA1")+cTabela+cCodPrd) )
+
+	nValTab := DA1->DA1_PRCVEN
+	
+EndIf
+
+If cCampo == "C6_PRCVEN"
+	nValDig		:= M->C6_PRCVEN
+ElseIF cCampo == "C6_C_VLRDI"	
+	nValDig		:= M->C6_C_VLRDI
+EndIf
+
+If nValDig < nValTab
+
+	If cCodUsr $ cUsuDesc
+
+		lRet := .T.
+	Else
+		Aviso("Nutratta","Usuário não tem permissão para alterar preço / Desconto a menor do que o preço de Tabela. Favor Verificar com responsável.",{"Voltar"},2,"Preço Tabela: "+Transform(nValTab,"@E 999,999.99"))
+		lRet := .F.
+	EndIf
+EndIf
+
+RestArea(aAreaPrc)
+
+Return(lRet)
+
+
+
+/*/
+{Protheus.doc} NTFTVL04
+Validação do Produto se Existe na Tabela de Frete.
+ 
+@author Davis Magalhães
+@since  27/04/2016
+@version 1.0 
+
+@param  N/H
+
+@return Logico (.T. ou .F.)
+/*/
+
+User function NTFTVL04() 
+
+//Local aAreaVen		:= GetArea()
+Local cVend			:= M->C5_VEND1
+Local cTabela			:= ""
+Local lRet				:= .T.
+Local cTipo			:= M->C5_TIPO
+
+If cTipo <> "N"
+	//RestArea(aAreaVen)
+	Return(lRet)
+EndIf
+
+dbSelectArea("SA3")
+SA3->( dbSetOrder(1) )
+If SA3->( dbSeek(xFilial("SA3")+cVend) )
+
+	cTabela := SA3->A3_TABELA
+	
+EndIf
+
+If Empty(cTabela)
+
+	Aviso("Nutratta","Vendedor sem tabela Cadastrada. Favor Verificar o Cadastro do mesmo.",{"Voltar"},2,"Tabela De Preços")
+	lRet := .F.
+Else
+	M->C5_TABELA == cTabela
+	
+EndIf
+
+//RestArea(aAreaVen)
+
+Return(lRet)
+
+
+
+/*/
+{Protheus.doc} NTFTVL05
+Tabela Divergente ao que o Vendedor está autorizado.
+ 
+@author Davis Magalhães
+@since  27/04/2016
+@version 1.0 
+
+@param  N/H
+
+@return Logico (.T. ou .F.)
+/*/
+User function NTFTVL05()
+
+//Local aAreaVen		:= GetArea()
+Local cVend				:= M->C5_VEND1
+Local cTabela			:= M->C5_TABELA
+Local cTipo				:= M->C5_TIPO
+Local lRet				:= .T.
+
+If cTipo <> "N"
+	//RestArea(aAreaVen)
+	Return(lRet)
+EndIf
+
+dbSelectArea("SA3")
+SA3->( dbSetOrder(1) )
+If SA3->( dbSeek(xFilial("SA3")+cVend) )
+
+	If SA3->A3_TABELA <> cTabela .And. ! Empty(cTabela)
+	
+		Aviso("Nutratta","Tabela Divergente ao que o Vendedor está autorizado.",{"Voltar"},2,"Tabela de Preco")
+		lRet := .F.
+	EndIf
+	
+EndIf
+
+//-----------------------------------------------------------------------
+// Valida o campo tabela de preço para ficar vazio. Davidson 24/11/2016
+//-----------------------------------------------------------------------
+If cTipo == "N" .And. Empty(cTabela)
+
+	Aviso("Nutratta","O campo tabela de preço deverá ser preenchido para pedidos do tipo normal.",{"Voltar"},2,"Tabela de Preco")
+	lRet := .F.
+EndIf
+
+Return(lRet)
+
+
+
+

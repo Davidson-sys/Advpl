@@ -1,0 +1,9 @@
+{
+    "totvsLanguageServer.welcomePage": false,
+    "[advpl]": {
+        "files.encoding": "windows1252"
+    },
+    "totvsLanguageServer.askCompileResult": false,
+    "files.encoding": "windows1252",
+    "totvsLanguageServer.compilation.showPreCompiler": true,
+    }

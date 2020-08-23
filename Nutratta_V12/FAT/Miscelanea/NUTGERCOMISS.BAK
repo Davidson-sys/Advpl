@@ -1,0 +1,2103 @@
+#INCLUDE "RWMAKE.CH"          
+#INCLUDE "PROTHEUS.CH"
+#INCLUDE "MSOBJECT.CH"
+#INCLUDE "topconn.ch"      
+#INCLUDE "COLORS.CH"
+#INCLUDE "TBICONN.CH"
+#include 'parmtype.ch'
+
+Static __aUserLg := {}                            
+//--------------------------------------------------------------------------
+/* {Protheus.doc} NUTGERCOMISS
+Rotina para gerar a comissão customizada Nutratta com base 
+na baixa dos titulos
+
+Empresa - Copyright -Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 18/05/2017.
+@version P11 R8
+*/
+//--------------------------------------------------------------------------
+
+User Function NUTGERCOMISS()
+//----------------------------------------------------------------------------------------------------------
+//Função especifica para calculo de comissão Nutratta
+//----------------------------------------------------------------------------------------------------------
+nValComiss:=FA440NUT(cFFilial,cNumTit,cPrefix,cTipo,cPedido,nParcela,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa)	
+
+Return
+
+
+//--------------------------------------------------------------------------
+/* {Protheus.doc} FA440NUT
+Função para recalculo de comissão Nutratta.
+
+Tabela: ZZ9 -Tabela de comissionamento.
+
+Retorno
+Valor de comissão calculado.
+
+Empresa - Copyright -Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 01/03/2017
+@version P11 R8
+*/
+//--------------------------------------------------------------------------
+Static Function FA440NUT(cFil,cNum,cPrefix,cTipo,cPedido,cNumParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa)
+                   
+Local 	xFilialN	:=""         
+local 	dEmissao	:=""
+Local 	cPedido		:=""
+Local 	cCond		:=""  
+Local 	cCondRel	:=""
+Local 	cCodTab   	:=""
+Local 	cCliente	:=""
+Local 	cLoja		:=""
+Local 	cSitTrib	:="" //Dentro ou fora de GO
+Local 	cVendedor	:="" 
+Local 	cTipVend	:="" // Vendedor ou representante comercial.
+Local 	cItem		:=""
+Local 	cProduto	:=""   
+Local 	cDescric	:=""   
+Local   nFretPrd	:=0
+Local 	nPrcVen		:=0
+Local 	nPrcTot		:=0
+Local 	nQuant		:=0
+Local 	nVal05		:=0
+Local	nVal1		:=0
+Local	nVal15		:=0
+Local	nVal2		:=0
+Local	nVal25		:=0
+Local	nVal3		:=0
+Local	nVal35		:=0
+Local	nVal4		:=0
+Local	nVal5		:=0
+Local	nVal6		:=0
+Local	nVal7		:=0
+Local 	nSoma		:=0
+Local  nEncarg		:=0  
+Local 	nDias		:=0
+Local 	nQTdParc	:=0
+Local   nTotVenda	:=0
+Local lContinua		:=.T.
+
+//-------------------------------------------------------
+//Posiciona na SC5 para buscar as informações do cliente 
+//-------------------------------------------------------
+dbSelectArea("SC5")
+dbSetOrder(7)
+If dbSeek(cFil+cNum)
+
+	xFilialN	:=SC5->C5_FILIAL	
+	cCliente	:=SC5->C5_CLIENTE
+	cLoja		:=SC5->C5_LOJACLI
+	cCond		:=SC5->C5_CONDPAG
+	cCodTab		:=SC5->C5_TABELA
+	cVendedor	:=SC5->C5_VEND1  
+	dEmissao    :=SC5->C5_EMISSAO                
+	cPedido		:=SC5->C5_NUM
+	nTotFrt		:=SC5->C5_C_VFRET
+		
+	//--Tratamento para condição 020-Data valor.
+	dDtata1		:=SC5->C5_DATA1
+	dDtata2		:=SC5->C5_DATA2	             
+	dDtata3		:=SC5->C5_DATA3
+	dDtata4		:=SC5->C5_DATA4
+	
+	/*Tirar a vista -2%  tratamento avista
+	001	-Avista     
+	004	-15 dias    0.1 * 15 = 1.5% 
+	006	-30 dias    0.1 * 30 = 3% 
+	009	-60 dias	0.1 * 60 = 6%
+	012	- 30/60		0.1 * 60 = 6%
+	020	-Data valor  */            
+						
+	//--Condição 001 avista	
+	/* Tratamento para condição de pagamento avista 
+	realizando o recalculo do desconto concedido para comissionar 
+	corretamento o valor vendido.
+	 De acordo com levantamento realizado em 24/03/2017 
+	Regra:
+	Preço de venda +2.1%  para ajustar o percentual de desconto.
+	Será criado uma automação no portal para conceder descontos automaticos 
+	ao preencher a condição 001,para tal será criado um campo conforme analise.
+	*/       
+	If cCond $ '001'
+		cCond	:='001' //Condição para a tabela ZZ9/ZZB	
+		cCondRel:='001' //Condição de pagamento para o Rel.Extrato.
+		//--001	-A vistas    0.1 * 15 = 1,5%
+		nEncarg :=0
+		nQTdParc:=1
+    EndIf
+    
+	//--Condição 004 comissiona na 006 para ZZ9/ZZB.	        
+	If cCond $ '004' 
+		cCond	:='006' //Condição para a tabela ZZ9/ZZB	
+		cCondRel:='004' //Condição de pagamento para o Rel.Extrato.
+		//--004	-15 dias    0.1 * 15 = 1,5%
+		nEncarg :=0
+		nQTdParc:=1
+	EndIf
+	
+	//--Condição 006 comissiona na 006 para ZZ9/ZZB	        
+	If cCond $ '006' 
+		cCondRel:='006' //Condição de pagamento para o Rel.Extrato.
+		//--006 -30 dias    0.1 * 30 = 3% *
+		nEncarg :=0
+		nQTdParc:=1
+	EndIf
+
+	//--Condição 009 comissiona na 012 para ZZ9/ZZB
+	If cCond $ '009'
+		cCond:='012' //Condição para a tabela ZZ9/ZZB
+		cCondRel:='009' //Condição de pagamento para o Rel.Extrato.
+		//--009	- 60 dias	0.1 * 60 = 6%
+		//nEncarg :=3	
+		nEncarg :=0
+		nQTdParc:=1		
+	EndIf 
+	
+	//--Condição 012 comissiona na 012 para ZZ9/ZZB
+	If cCond $ '012' .And.  cCondRel != "009"  
+		cCondRel:='012' //Condição de pagamento para o Rel.Extrato.
+		//--012	- 60 dias	0.1 * 60 = 6%
+		//nEncarg :=1.5			
+		nEncarg :=0
+		nQTdParc:=2
+	EndIf 
+
+	//--Tratamento para condição negociada-020.
+	If cCond $ '020'
+		cCondRel:='020' //Condição de pagamento para o Rel.Extrato.
+		cCond	:='012' //Condição para a tabela ZZ9/ZZB	
+
+		If	!Empty(dDtata4)       	
+       		nDias+=DateDiffDay( dDtata3,dDtata4)  //-> nDiffDay ( Diferenca em dias entre duas datas       	
+	       	nDias+=DateDiffDay( dDtata2,dDtata3)  //-> nDiffDay ( Diferenca em dias entre duas datas       	
+	    // 	nDias+=DateDiffDay( dEmissao,dDtata1)
+       		nQTdParc:=4
+		//	nEncarg := 0.1 * nDias/nQTdParc  //nEncarg será rezudido na base de comissão
+       		nEncarg	:=0
+       		cCond	:='012' //Condição para a tabela ZZ9/ZZB
+       		
+       	ElseIf !Empty(dDtata3)       	
+       		nDias+=DateDiffDay( dDtata2,dDtata3)  //-> nDiffDay ( Diferenca em dias entre duas datas       	
+	       	nDias+=DateDiffDay( dDtata1,dDtata2)  //-> nDiffDay ( Diferenca em dias entre duas datas       	
+	    // 	nDias+=DateDiffDay( dEmissao,dDtata1)
+       		nQTdParc:=3
+	   //  	nEncarg := 0.1 * nDias/nQTdParc  //nEncarg será rezudido na base de comissão	       	
+       		nEncarg	:=0
+       	ElseIf	!Empty(dDtata2) 
+           	nDias+=DateDiffDay( dDtata1,dDtata2)  //-> nDiffDay ( Diferenca em dias entre duas datas       	
+	      //nDias+=DateDiffDay( dEmissao,dDtata1)
+	       	nQTdParc:=2
+	      //nEncarg := 0.1 * nDias/nQTdParc  //nEncarg será rezudido na base de comissão
+	       nEncarg	:=0
+	    Else 
+       		nDias:=DateDiffDay( dEmissao,dDtata1)
+       		nQTdParc:=1
+       		nEncarg :=0	//.1 * nDias/nQTdParc	//nEncarg será rezudido na base de comissão
+       	EndIf
+       	
+       	//--Tratamento para 020 com 30 dias 
+       	If nDias  <= 30        	                     
+       		
+       		cCond	:='006'            	
+       	ElseIf nDias  > 31 
+       	
+			cCond	:='012'       	
+       	EndIf       	
+	EndIf 
+EndIf
+
+//--------------------------------------------------------------------------------
+//Tratamento para comissao para pedidos realizados em 2016
+//Comissionamento por pedido de venda e não por produto.
+//Percentual de comissão do cadastro de vendedores.
+//---------------------------------------------------------------------------------------
+//Titulos manuais verificar como comissionar nao existe SC5 e SF2 para esses Titulos.
+If Empty(dEmissao)
+	Return(nValComiss)
+EndIf
+
+If Dtos(dEmissao) <= '20170201'
+        
+	lContinua:=.F.
+	
+	//--------------------------------------------------------------------------------
+	//Verifica se o pedido é venda atraves da CFOP.
+	//--------------------------------------------------------------------------------
+	dbSelectArea("SC6")
+	dbSetOrder(4)
+	If dbSeek(cFil+cNum)
+	
+		If	Alltrim(SC6->C6_CF) $ cFops      
+		            
+			nValComiss	:= FA440ZZX(cFil,cNum,cPrefix,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nTotFrt)	
+			cItem		:=""
+			cProduto	:=""
+			cDescric	:=""			
+			cCodTab		:=""
+			nPrcVen		:=0
+			nQuant		:=0
+			nPrcTot		:=0			 
+			nFretPrd	:=0                
+			nPercent	:=nPercComiss
+			nPrcTot		:=nValBruto
+				
+			//----------------------------------------------------------------------------------------------------------
+			//Implementar a gravação em tabela para emissão de relatorio de extrato de comissão.
+			//-----------------------------------------------------------------------------------------------------------		
+			FA440GRAVA(xFilialN,cPedido,cNum,dEmissao,cProduto,cDescric,nFretPrd,nTotFrt,nPrcVen,nQuant,nPrcTot,cVendedor,cCliente,cLoja,cCond,cCodTab,cEstado,nImposto,nBaseComiss,nPercent,nValComiss,nEncarg,cCondRel,nQTdParc,cNumParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,cPrefix,cItem,1)
+		EndIf
+	EndIf
+EndIf
+
+
+//--------------------------------------------------------------------------------
+//Caso não seja um pedido de 2016 continua.....
+//--------------------------------------------------------------------------------
+If lContinua
+
+	//--------------------------------------------------------------------------------
+	//Posiciona na SC6 para buscar as informações do produto.
+	//--------------------------------------------------------------------------------
+	dbSelectArea("SC6")
+	dbSetOrder(4)
+	If dbSeek(cFil+cNum)
+	
+	    //-Verifica se o pedido é venda atraves da CFOP.
+		If	Alltrim(SC6->C6_CF) $ cFops      
+			
+			While !Eof() .And. SC6->C6_NOTA == cNum
+		        
+				cItem	:=SC6->C6_ITEM
+				cProduto:=SC6->C6_PRODUTO
+				cDescric:=SC6->C6_DESCRI
+				nQuant	:=SC6->C6_QTDVEN
+				nFretPrd:=SC6->C6_C_FRETE
+				nFreteI	:=SC6->C6_C_FRETE * SC6->C6_QTDVEN
+				nPrcVen	:=SC6->C6_C_VLRDI //SC6->C6_PRCVEN
+				nPrcTot	:=SC6->C6_VALOR
+		
+				If Dtos(dEmissao) > '20170201' .And. Dtos(dEmissao) < '20170315'	
+					//---------------------------------------------------------------------------------------
+					//Rotina para calcular a comissão de cada produto do pedido de vendas.-ZZB-Modelo Antigo 
+					//---------------------------------------------------------------------------------------		
+					nValComiss:= FA440ZZB(cProduto,nFreteI,nPrcVen,nPrcTot,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nQuant,nQTdParc)	
+					nSoma+=nValComiss				
+				
+				//---------------------------------------------------------------------------------------
+				//Rotina para calcular a comissão de cada produto do pedido de vendas.  ZZ9-Modelo Novo
+				//---------------------------------------------------------------------------------------						
+				ElseIf Dtos(dEmissao) >= '20170315'	 .And. Dtos(dEmissao) < '20170403'	
+				
+					nValComiss:= FA440ZZ9(cProduto,nFreteI,nPrcVen,nPrcTot,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nQuant,nQTdParc)	
+					nSoma+=nValComiss
+				
+				//ZZC-03/04/2017	
+				ElseIf Dtos(dEmissao) >= '20170403' .And. Dtos(dEmissao) < '20170413'	
+					//------------------------------------------------------------------------------------------------------
+					//Rotina para calcular a comissão de cada produto do pedido de vendas.-ZZC-Primeira tabela abril- 2017. 
+					//------------------------------------------------------------------------------------------------------		
+					nValComiss:= FA440ZZC(cProduto,nFreteI,nPrcVen,nPrcTot,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nQuant,nQTdParc)	
+					nSoma+=nValComiss
+					
+				//ZZD-13/04/2017
+				ElseIf Dtos(dEmissao) >= '20170413' .And. Dtos(dEmissao) < '20170508'		
+					//------------------------------------------------------------------------------------------------------
+					//Rotina para calcular a comissão de cada produto do pedido de vendas.-ZZD-Segunda tabela abril- 2017. 
+					//------------------------------------------------------------------------------------------------------		
+					nValComiss:= FA440ZZD(cProduto,nFreteI,nPrcVen,nPrcTot,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nQuant,nQTdParc)	
+					nSoma+=nValComiss				                  								
+				
+				//ZZE-08/05/2017
+				ElseIf Dtos(dEmissao) >= '20170508' .And. Dtos(dEmissao) < '20170603'	
+					//------------------------------------------------------------------------------------------------------
+					//Rotina para calcular a comissão de cada produto do pedido de vendas.-ZZE-Segunda tabela Maio- 2017. 
+					//------------------------------------------------------------------------------------------------------		
+					nValComiss:= FA440ZZE(cProduto,nFreteI,nPrcVen,nPrcTot,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nQuant,nQTdParc)	
+					nSoma+=nValComiss				                  								
+								
+				//ZZF-03/06/2017
+				ElseIf Dtos(dEmissao) >= '20170603'	 .And. Dtos(dEmissao) < '20170613'
+					//------------------------------------------------------------------------------------------------------
+					//Rotina para calcular a comissão de cada produto do pedido de vendas.-ZZF-Prmeira tabela de Junho 2017. 
+					//------------------------------------------------------------------------------------------------------		
+					nValComiss:= FA440ZZF(cProduto,nFreteI,nPrcVen,nPrcTot,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nQuant,nQTdParc)	
+					nSoma+=nValComiss				                  								
+				
+				//ZZG-13/06/2017
+				ElseIf Dtos(dEmissao) >= '20170613'	
+					//------------------------------------------------------------------------------------------------------
+					//Rotina para calcular a comissão de cada produto do pedido de vendas.-ZZF-Prmeira tabela de Junho 2017. 
+					//------------------------------------------------------------------------------------------------------		
+					nValComiss:= FA440ZZG(cProduto,nFreteI,nPrcVen,nPrcTot,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nQuant,nQTdParc)	
+					nSoma+=nValComiss				                  								
+				EndIf
+							
+				//----------------------------------------------------------------------------------------------------------
+				//Implementar a gravação em tabela para emissão de relatorio de extrato de comissão.
+				//-----------------------------------------------------------------------------------------------------------		
+				FA440GRAVA(xFilialN,cPedido,cNum,dEmissao,cProduto,cDescric,nFretPrd,nTotFrt,nPrcVen,nQuant,nPrcTot,cVendedor,cCliente,cLoja,cCond,cCodTab,cEstado,nImposto,nBaseComiss,nPercent,nValComiss,nEncarg,cCondRel,nQTdParc,cNumParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,cPrefix,cItem,2)
+					
+			SC6->(dbSkip())	
+			End   
+		Else
+			lAborta:=.T.
+		EndIf
+	EndIf	
+	nValComiss:=nSoma
+EndIf
+Return(nValComiss)
+
+
+//--------------------------------------------------------------------------
+/* {Protheus.doc} FA440ZZX
+Função para recalculo de comissão Nutratta. 
+Comissões anteriories a 01/02/2017.
+comissionar no modelo antigo de acordo com o cadastro do vendedor.
+
+Retorno                 
+Valor de comissão calculado.
+
+Empresa - Copyright -Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 31/03/2017
+@version P11 R8
+*/
+//--------------------------------------------------------------------------  
+Static Function FA440ZZX(cFil,cNum,cPrefix,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nTotFrt)	
+
+Local 	cSitTrib	:="" 	//Dentro ou fora de GO
+Local 	cTipVend	:="" 	// Vendedor ou representante comercial.
+Local 	nVal0		:=0
+Local 	nVal05		:=0
+Local	nVal1		:=0
+Local	nVal15		:=0
+Local	nVal2		:=0
+Local	nVal25		:=0
+Local	nVal3		:=0
+Local	nVal35		:=0
+Local	nVal4		:=0
+Local	nVal5		:=0
+Local	nVal6		:=0
+Local	nVal7		:=0
+Local   nValImposto	:=0
+Local   nValEncarg 	:=0
+Local   nValAbat	:=0        
+Local 	nPrcUnitot	:=0 
+Local 	nPrTotProp	:=0
+Local   nPercentX	:=0
+
+//--------------------------------------------------------------------------------
+//Posiciona na SA3 para buscar as informações do Vendedor/Representante.
+//--------------------------------------------------------------------------------
+dbSelectArea("SA3")
+dbSetOrder(1)
+If dbSeek(xFilial("SA3")+cVendedor)
+
+	cTipVend	:=SA3->A3_TIPVEND //1=Cooperativa;2=Funcionario;3=Corretora;4=Representante
+	nPercComiss	:=SA3->A3_COMIS //Percentual de comissao.	
+EndIf
+
+//--------------------------------------------------------------------------------
+//Busca o total da nota na SF2.
+//--------------------------------------------------------------------------------
+dbSelectArea("SF2")
+dbSetOrder(1)
+If dbSeek(cFil+cNum+'1')//+Alltrim(cCliente+cLoja))	//Filial+doc+serie+cliente+loja
+
+	nValBruto	:=SF2->F2_VALBRUT
+EndIf
+
+
+//--------------------------------------------------------------------------------
+//Posiciona na SA1 para buscar a localização do cliente Dentro ou fora do estado
+//--------------------------------------------------------------------------------
+dbSelectArea("SA1")
+dbSetOrder(1)
+If dbSeek(xFilial("SA1")+cCliente+cLoja)
+
+	cEstado:=SA1->A1_EST 
+	
+	If  cEstado $ "GO"
+		cSitTrib:="D"
+		nImposto	:= 9.25/100  //0.0925        
+	Else
+		cSitTrib:="F"
+		nImposto	:= 14.05/100  //0.1405
+	EndIf	
+
+ 	 //=R18-Q18-(((R18*S18)))-((R18*T18))
+	/*
+	nValImposto	:=(nPrcTot*nImposto)
+    nValEncarg 	:=(nPrcTot*nEncarg)/100 
+    nValAbat	:= nValImposto+nValEncarg 
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nPrcTot-nFreteI-nValAbat)/nQTdParc
+	*/
+
+	//--Calculo para baixa Parcial após 22/03/2017 
+	nPercentX	:=((nValBx*100)/nValOrig)
+    nValImposto	:=nPercentX*(nValBruto*nImposto)/100
+    nValEncarg 	:=nPercentX*((nValBruto*nEncarg)/100)/100 
+    nValAbat	:= nValImposto+nValEncarg 
+    
+   	//--Retirar frete proporcional.
+    nTotFrt		:= (nPercentX*nTotFrt)/100	//nFreteI*(nValBx*100/nPrcTot)/100
+
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nValBruto-nTotFrt-nValAbat)/nQTdParc 
+
+	nValComiss:= (nBaseComiss * nPercComiss)/100	
+EndIf
+
+Return(nValComiss)
+
+    
+
+//--------------------------------------------------------------------------
+/* {Protheus.doc} FA440ZZ9
+Função para recalculo de comissão Nutratta. Tabela modelo novo.
+Tabela: ZZ9 -Tabela de comissionamento.
+
+Retorno
+Valor de comissão calculado.
+
+Empresa - Copyright -Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 01/03/2017
+@version P11 R8
+*/
+//--------------------------------------------------------------------------
+Static Function FA440ZZ9(cProduto,nFreteI,nPrcVen,nPrcTot,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nQuant,nQTdParc)
+
+Local 	cSitTrib	:="" 	//Dentro ou fora de GO
+Local 	cTipVend	:="" 	// Vendedor ou representante comercial.
+Local 	nVal0		:=0
+Local 	nVal05		:=0
+Local	nVal1		:=0
+Local	nVal15		:=0
+Local	nVal2		:=0
+Local	nVal25		:=0
+Local	nVal3		:=0
+Local	nVal35		:=0
+Local	nVal4		:=0
+Local	nVal5		:=0
+Local	nVal6		:=0
+Local	nVal7		:=0
+Local   nValImposto	:=0
+Local   nValEncarg 	:=0
+Local   nValAbat	:=0        
+Local 	nPrcUnitot	:=0 
+Local 	nPrTotProp	:=0
+Local   nPercentX	:=0
+//--------------------------------------------------------------------------------
+//Posiciona na SA3 para buscar as informações do Vendedor/Representante.
+//--------------------------------------------------------------------------------
+dbSelectArea("SA3")
+dbSetOrder(1)
+If dbSeek(xFilial("SA3")+cVendedor)
+
+	cTipVend	:=SA3->A3_TIPVEND //1=Cooperativa;2=Funcionario;3=Corretora;4=Representante
+EndIf
+
+//--------------------------------------------------------------------------------
+//Posiciona na SA1 para buscar a localização do cliente Dentro ou fora do estado
+//--------------------------------------------------------------------------------
+dbSelectArea("SA1")
+dbSetOrder(1)
+If dbSeek(xFilial("SA1")+cCliente+cLoja)
+
+	cEstado:=SA1->A1_EST 
+	
+	If  cEstado $ "GO"
+		cSitTrib:="D"
+		nImposto	:= 9.25/100  //0.0925        
+	Else
+		cSitTrib:="F"
+		nImposto	:= 14.05/100  //0.1405
+	EndIf	
+ 	 //=R18-Q18-(((R18*S18)))-((R18*T18))
+	/*  Calculo para baixa Total 
+    nValImposto	:=(nPrcTot*nImposto)
+//  nValEncarg 	:=(nPrcTot*nEncarg)/100 
+//	 nValAbat	:= nValImposto+nValEncarg 
+    
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nPrcTot-nFreteI-nValAbat)/nQTdParc
+	*/
+    
+	//--Calculo para baixa Parcial após 22/03/2017 
+    nPercentX	:=((nValBx*100)/nValOrig)
+    nValImposto	:=nPercentX*(nPrcTot*nImposto)/100
+    nValEncarg 	:=nPercentX*((nPrcTot*nEncarg)/100)/100 
+    nValAbat	:= nValImposto+nValEncarg 
+    
+    //--Retirar  proporcional por produto
+    nPrcUnitot	:=nQuant*nPrcVen 
+    nPrTotProp	:= (nPercentX* nPrcTot)/100
+   	
+   	//--Retirar frete proporcional.
+    nFreteI		:= (nPercentX*nFreteI)/100	//nFreteI*(nValBx*100/nPrcTot)/100
+
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nPrTotProp-nFreteI-nValAbat)/nQTdParc  
+
+EndIf
+
+
+//--------------------------------------------------------------------------------
+//Posiciona na ZZ9 para buscar o percentual de comissão a ser aplicado.
+//--------------------------------------------------------------------------------
+dbSelectArea("ZZ9")
+dbSetOrder(1)
+If dbSeek("0101"+cTipVend+cSitTrib+cCond+cProduto)
+
+	nVal0000	:=ZZ9->ZZ9_0000 
+	nVal0025	:=ZZ9->ZZ9_0025
+	nVal0050	:=ZZ9->ZZ9_0050	
+	nVal0075	:=ZZ9->ZZ9_0075
+	nVal0100	:=ZZ9->ZZ9_0100
+   	nVal0125	:=ZZ9->ZZ9_0125 
+	nVal0150	:=ZZ9->ZZ9_0150               
+	nVal0175	:=ZZ9->ZZ9_0175               
+	nVal0200	:=ZZ9->ZZ9_0200
+	nVal0225	:=ZZ9->ZZ9_0225
+ 	nVal0250	:=ZZ9->ZZ9_0250    
+	nVal0275	:=ZZ9->ZZ9_0275
+	nVal0300	:=ZZ9->ZZ9_0300
+	nVal0325	:=ZZ9->ZZ9_0325
+	nVal0350	:=ZZ9->ZZ9_0350
+	nVal0375	:=ZZ9->ZZ9_0375                      
+	nVal0400	:=ZZ9->ZZ9_0400 
+	nVal0500 	:=ZZ9->ZZ9_0500 
+	nVal0600 	:=ZZ9->ZZ9_0600
+	nVal0700 	:=ZZ9->ZZ9_0700			       
+	nVal0800 	:=ZZ9->ZZ9_0800
+	nVal0900 	:=ZZ9->ZZ9_0900
+	nVal1000 	:=ZZ9->ZZ9_1000
+	nVal1100 	:=ZZ9->ZZ9_1100
+	nVal1200 	:=ZZ9->ZZ9_1200 
+	nVal1300 	:=ZZ9->ZZ9_1300 
+	nVal1400 	:=ZZ9->ZZ9_1400
+	nVal1500 	:=ZZ9->ZZ9_1500
+	
+	//--Vendedor	
+	If cTipVend == "2" 
+	
+		If 	nPrcVen >= nVal0000	 .And. nPrcVen < nVal0025 .Or. nVal0025 == 0	
+			nPercent:=0
+		ElseIf nPrcVen >= nVal0025  .And. (nPrcVen < nVal0050 .Or. nVal0050 == 0) 
+			nPercent:=0.25	
+		ElseIf nPrcVen >= nVal0050 .And. (nPrcVen < nVal0075 .Or. nVal0075 == 0)
+			nPercent:=0.50		
+		ElseIf  nPrcVen >= nVal0075 .And. (nPrcVen < nVal0100 .Or. nVal0100 == 0) 
+			nPercent:=0.75
+		ElseIf nPrcVen >= nVal0100 .And. (nPrcVen < nVal0125 .Or. nVal0125 == 0) 
+			nPercent:=1
+		ElseIf nPrcVen >= nVal0125 .And. (nPrcVen < nVal0150 .Or. nVal0150 == 0) 
+			nPercent:=1.25			
+		ElseIf nPrcVen >= nVal0150 .And. (nPrcVen < nVal0175 .Or. nVal0175 == 0)
+			nPercent:=1.50
+		ElseIf nPrcVen >= nVal0175 .And. (nPrcVen < nVal0200 .Or. nVal0200 == 0)
+			nPercent:=1.75
+		ElseIf nPrcVen >= nVal0200 .And. (nPrcVen < nVal0225 .Or. nVal0225 == 0)
+			nPercent:=2
+		ElseIf nPrcVen >= nVal0225 .And. (nPrcVen < nVal0250 .Or. nVal0250 == 0)
+			nPercent:=2.25			
+		ElseIf nPrcVen >= nVal0250 .And. (nPrcVen < nVal0275 .Or. nVal0275 == 0)
+			nPercent:=2.50
+		ElseIf nPrcVen >= nVal0275 .And. (nPrcVen < nVal0300 .Or. nVal0300 == 0)
+			nPercent:=2.75
+		ElseIf nPrcVen >= nVal0300 .And. (nPrcVen < nVal0325 .Or. nVal0325 == 0)
+			nPercent:=3
+		ElseIf nPrcVen >= nVal0325 .And. (nPrcVen < nVal0350 .Or. nVal0350 == 0)
+			nPercent:=3.25		
+		ElseIf nPrcVen >= nVal0350 .And. (nPrcVen < nVal0375 .Or. nVal0375 == 0)
+			nPercent:=3.50		
+		ElseIf nPrcVen >= nVal0375  .And. nVal0375 != 0
+			nPercent:=3.75		
+		EndIf		
+	EndIf
+
+	//--Representante	
+	If cTipVend == "4" 
+	
+		If 	nPrcVen >= nVal0000  .And. nPrcVen < nVal0100 .Or. nVal0100 == 0	
+			nPercent:=0
+		ElseIf nPrcVen >= nVal0100 .And. (nPrcVen < nVal0200 .Or. nVal0200 == 0)
+			nPercent:=1		
+		ElseIf nPrcVen >= nVal0200 .And. (nPrcVen < nVal0300 .Or. nVal0300 == 0) 
+			nPercent:=2
+		ElseIf nPrcVen >= nVal0300 .And. (nPrcVen < nVal0400 .Or. nVal0400 == 0)
+			nPercent:=3
+		ElseIf nPrcVen >= nVal0400 .And.(nPrcVen < nVal0500 .Or. nVal0500 == 0)
+			nPercent:=4
+		ElseIf nPrcVen >= nVal0500 .And. (nPrcVen < nVal0600 .Or. nVal0600 == 0)
+			nPercent:=5
+		ElseIf nPrcVen >= nVal0600 .And. (nPrcVen < nVal0700 .Or. nVal0700 == 0)
+			nPercent:=6
+		ElseIf nPrcVen >= nVal0700 .And. (nPrcVen < nVal0800 .Or. nVal0800 == 0)
+			nPercent:=7
+		ElseIf nPrcVen >= nVal0800 .And. (nPrcVen < nVal0900 .Or. nVal0900 == 0)
+			nPercent:=8	
+		ElseIf nPrcVen >= nVal0900 .And. (nPrcVen < nVal1000 .Or. nVal1000 == 0)
+			nPercent:=9
+		ElseIf nPrcVen >= nVal1000 .And. (nPrcVen < nVal1100 .Or. nVal1100 == 0)
+			nPercent:=10		
+		ElseIf nPrcVen >= nVal1100 .And. (nPrcVen < nVal1200 .Or. nVal1200 == 0)
+			nPercent:=11
+		ElseIf nPrcVen >= nVal1200 .And. (nPrcVen < nVal1300 .Or. nVal1300 == 0)
+			nPercent:=12		
+		ElseIf nPrcVen >= nVal1300 .And. (nPrcVen < nVal1400 .Or. nVal1400 == 0)
+			nPercent:=13
+		ElseIf nPrcVen >= nVal1400 .And. (nPrcVen < nVal1500 .Or. nVal1500 == 0)
+			nPercent:=14
+		ElseIf nPrcVen >= nVal1500  .And. nVal1500 != 0
+			nPercent:=15
+		EndIf
+	EndIf
+	
+	nValComiss:= (nBaseComiss * nPercent)/100
+	
+EndIf
+
+Return(nValComiss)
+
+
+
+//--------------------------------------------------------------------------
+/* {Protheus.doc} FA440ZZB
+Função para recalculo de comissão Nutratta. Tabela modelo antigo.
+Tabela: ZZB -Tabela de comissionamento.
+
+Retorno
+Valor de comissão calculado.
+
+Empresa - Copyright -Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 15/03/2017
+@version P11 R8
+*/
+//--------------------------------------------------------------------------  
+Static Function FA440ZZB(cProduto,nFreteI,nPrcVen,nPrcTot,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nQuant,nQTdParc)	
+
+Local 	cSitTrib	:="" 	//Dentro ou fora de GO
+Local 	cTipVend	:="" 	// Vendedor ou representante comercial.
+Local 	nVal0		:=0
+Local 	nVal05		:=0
+Local	nVal1		:=0
+Local	nVal15		:=0
+Local	nVal2		:=0
+Local	nVal25		:=0
+Local	nVal3		:=0
+Local	nVal35		:=0
+Local	nVal4		:=0
+Local	nVal5		:=0
+Local	nVal6		:=0
+Local	nVal7		:=0
+Local   nValImposto	:=0
+Local   nValEncarg 	:=0
+Local   nValAbat	:=0        
+Local 	nPrcUnitot	:=0 
+Local 	nPrTotProp	:=0
+Local   nPercentX	:=0
+//--------------------------------------------------------------------------------
+//Posiciona na SA3 para buscar as informações do Vendedor/Representante.
+//--------------------------------------------------------------------------------
+dbSelectArea("SA3")
+dbSetOrder(1)
+If dbSeek(xFilial("SA3")+cVendedor)
+
+	cTipVend	:=SA3->A3_TIPVEND //1=Cooperativa;2=Funcionario;3=Corretora;4=Representante
+EndIf
+
+//--------------------------------------------------------------------------------
+//Posiciona na SA1 para buscar a localização do cliente Dentro ou fora do estado
+//--------------------------------------------------------------------------------
+dbSelectArea("SA1")
+dbSetOrder(1)
+If dbSeek(xFilial("SA1")+cCliente+cLoja)
+
+	cEstado:=SA1->A1_EST 
+	
+	If  cEstado $ "GO"
+		cSitTrib:="D"
+		nImposto	:= 9.25/100  //0.0925        
+	Else
+		cSitTrib:="F"
+		nImposto	:= 14.05/100  //0.1405
+	EndIf	
+
+ 	 //=R18-Q18-(((R18*S18)))-((R18*T18))
+	/*
+	nValImposto	:=(nPrcTot*nImposto)
+    nValEncarg 	:=(nPrcTot*nEncarg)/100 
+    nValAbat	:= nValImposto+nValEncarg 
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nPrcTot-nFreteI-nValAbat)/nQTdParc
+	*/
+
+	//--Calculo para baixa Parcial após 22/03/2017 
+    nPercentX	:=((nValBx*100)/nValOrig)
+    nValImposto	:=nPercentX*(nPrcTot*nImposto)/100
+    nValEncarg 	:=nPercentX*((nPrcTot*nEncarg)/100)/100 
+    nValAbat	:= nValImposto+nValEncarg 
+    
+    //--Retirar  proporcional por produto
+    nPrcUnitot	:=nQuant*nPrcVen 
+    nPrTotProp	:= (nPercentX* nPrcTot)/100
+   	
+   	//--Retirar frete proporcional.
+    nFreteI		:= (nPercentX*nFreteI)/100	//nFreteI*(nValBx*100/nPrcTot)/100
+
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nPrTotProp-nFreteI-nValAbat)/nQTdParc 
+
+EndIf
+
+//--------------------------------------------------------------------------------
+//Posiciona na ZZB para buscar o percentual de comissão a ser aplicado.
+//--------------------------------------------------------------------------------
+dbSelectArea("ZZB")
+dbSetOrder(1)
+If dbSeek("0101"+cTipVend+cSitTrib+cCond+cProduto)
+
+	nVal0000	:=ZZB->ZZB_0000 
+	nVal0050	:=ZZB->ZZB_0050	
+	nVal0100	:=ZZB->ZZB_0100
+	nVal0150	:=ZZB->ZZB_0150               
+	nVal0200	:=ZZB->ZZB_0200
+ 	nVal0250	:=ZZB->ZZB_0250    
+	nVal0300	:=ZZB->ZZB_0300
+	nVal0350	:=ZZB->ZZB_0350                 
+	nVal0400	:=ZZB->ZZB_0400 
+	nVal0500 	:=ZZB->ZZB_0500 
+	nVal0600 	:=ZZB->ZZB_0600
+	nVal0700 	:=ZZB->ZZB_0700  
+	nVal0900 	:=ZZB->ZZB_0900
+	nVal1100 	:=ZZB->ZZB_1100
+	nVal1300 	:=ZZB->ZZB_1300
+	nVal1500 	:=ZZB->ZZB_1500                           
+	
+	//--Vendedor	
+	If cTipVend == "2" 
+	
+		If 	nPrcVen >= nVal0000	 .And. nPrcVen < nVal0050 .Or. nVal0050 == 0	
+			nPercent:=0
+		ElseIf nPrcVen >= nVal0050  .And. (nPrcVen < nVal0100 .Or. nVal0100 == 0) 
+			nPercent:=0.50	
+		ElseIf nPrcVen >= nVal0100 .And. (nPrcVen < nVal0150 .Or. nVal0150 == 0)
+			nPercent:=1		
+		ElseIf  nPrcVen >= nVal0150 .And. (nPrcVen < nVal0200 .Or. nVal0200 == 0) 
+			nPercent:=1.5
+		ElseIf nPrcVen >= nVal0200 .And. (nPrcVen < nVal0250 .Or. nVal0250 == 0) 
+			nPercent:=2
+		ElseIf nPrcVen >= nVal0250 .And. (nPrcVen < nVal0300 .Or. nVal0300 == 0) 
+			nPercent:=2.50			
+		ElseIf nPrcVen >= nVal0300 .And. (nPrcVen < nVal0350 .Or. nVal0350 == 0)
+			nPercent:=3
+		ElseIf nPrcVen >= nVal0350  .And. nVal0350 != 0
+			nPercent:=3.50		
+		EndIf		
+	EndIf
+
+	//--Representante	
+	If cTipVend == "4" 
+	
+		If 	nPrcVen >= nVal0000	 .And. nPrcVen < nVal0100 .Or. nVal0100 == 0	
+			nPercent:=0	
+		ElseIf nPrcVen >= nVal0100 .And. (nPrcVen < nVal0200 .Or. nVal0200 == 0)
+			nPercent:=1		
+		ElseIf nPrcVen >= nVal0200 .And. (nPrcVen < nVal0300 .Or. nVal0300 == 0) 
+			nPercent:=2					
+		ElseIf nPrcVen >= nVal0300 .And. (nPrcVen < nVal0400 .Or. nVal0400 == 0)
+			nPercent:=3		
+		ElseIf nPrcVen >= nVal0400 .And. (nPrcVen < nVal0500 .Or. nVal0500 == 0)
+			nPercent:=4
+		ElseIf nPrcVen >= nVal0500 .And. (nPrcVen < nVal0600 .Or. nVal0600 == 0)
+			nPercent:=5			
+		ElseIf nPrcVen >= nVal0600 .And. (nPrcVen < nVal0700 .Or. nVal0700 == 0)
+			nPercent:=6
+		ElseIf nPrcVen >= nVal0700 .And. (nPrcVen < nVal0900 .Or. nVal0900 == 0)
+			nPercent:=7
+		ElseIf nPrcVen >= nVal0900 .And. (nPrcVen < nVal1100 .Or. nVal1100 == 0)
+			nPercent:=9
+		ElseIf nPrcVen >= nVal1100 .And. (nPrcVen < nVal1300 .Or. nVal1300 == 0)
+			nPercent:=11		
+		ElseIf nPrcVen >= nVal1300 .And. (nPrcVen < nVal1500 .Or. nVal1500 == 0)
+			nPercent:=13
+		ElseIf nPrcVen >= nVal1500  .And. nVal1500 != 0
+			nPercent:=15		
+		EndIf		
+	EndIf
+	
+	nValComiss:= (nBaseComiss * nPercent)/100
+	
+EndIf
+
+Return(nValComiss)
+   
+
+
+
+
+
+//--------------------------------------------------------------------------
+/* {Protheus.doc} FA440ZZC
+Função para recalculo de comissão Nutratta. Tabela modelo novo.
+Tabela: ZZC -Tabela de comissionamento. 03/04/2017.
+
+Retorno
+Valor de comissão calculado.
+
+Empresa - Copyright -Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 01/03/2017
+@version P11 R8
+*/
+//--------------------------------------------------------------------------
+Static Function FA440ZZC(cProduto,nFreteI,nPrcVen,nPrcTot,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nQuant,nQTdParc)
+
+Local 	cSitTrib	:="" 	//Dentro ou fora de GO
+Local 	cTipVend	:="" 	// Vendedor ou representante comercial.
+Local 	nVal0		:=0
+Local 	nVal05		:=0
+Local	nVal1		:=0
+Local	nVal15		:=0
+Local	nVal2		:=0
+Local	nVal25		:=0
+Local	nVal3		:=0
+Local	nVal35		:=0
+Local	nVal4		:=0
+Local	nVal5		:=0
+Local	nVal6		:=0
+Local	nVal7		:=0
+Local   nValImposto	:=0
+Local   nValEncarg 	:=0
+Local   nValAbat	:=0        
+Local 	nPrcUnitot	:=0 
+Local 	nPrTotProp	:=0
+Local   nPercentX	:=0
+//--------------------------------------------------------------------------------
+//Posiciona na SA3 para buscar as informações do Vendedor/Representante.
+//--------------------------------------------------------------------------------
+dbSelectArea("SA3")
+dbSetOrder(1)
+If dbSeek(xFilial("SA3")+cVendedor)
+
+	cTipVend	:=SA3->A3_TIPVEND //1=Cooperativa;2=Funcionario;3=Corretora;4=Representante
+EndIf
+
+//--------------------------------------------------------------------------------
+//Posiciona na SA1 para buscar a localização do cliente Dentro ou fora do estado
+//--------------------------------------------------------------------------------
+dbSelectArea("SA1")
+dbSetOrder(1)
+If dbSeek(xFilial("SA1")+cCliente+cLoja)
+
+	cEstado:=SA1->A1_EST 
+	
+	If  cEstado $ "GO"
+		cSitTrib:="D"
+		nImposto	:= 9.25/100  //0.0925        
+	Else
+		cSitTrib:="F"
+		nImposto	:= 14.05/100  //0.1405
+	EndIf	
+ 	 //=R18-Q18-(((R18*S18)))-((R18*T18))
+	/*  Calculo para baixa Total 
+    nValImposto	:=(nPrcTot*nImposto)
+//  nValEncarg 	:=(nPrcTot*nEncarg)/100 
+//	 nValAbat	:= nValImposto+nValEncarg 
+    
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nPrcTot-nFreteI-nValAbat)/nQTdParc
+	*/
+    
+	//--Calculo para baixa Parcial após 22/03/2017 
+    nPercentX	:=((nValBx*100)/nValOrig)
+    nValImposto	:=nPercentX*(nPrcTot*nImposto)/100
+    nValEncarg 	:=nPercentX*((nPrcTot*nEncarg)/100)/100 
+    nValAbat	:= nValImposto+nValEncarg 
+    
+    //--Retirar  proporcional por produto
+    nPrcUnitot	:=nQuant*nPrcVen 
+    nPrTotProp	:= (nPercentX* nPrcTot)/100
+   	
+   	//--Retirar frete proporcional.
+    nFreteI		:= (nPercentX*nFreteI)/100	//nFreteI*(nValBx*100/nPrcTot)/100
+
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nPrTotProp-nFreteI-nValAbat)/nQTdParc  
+
+EndIf
+
+
+//--------------------------------------------------------------------------------
+//Posiciona na ZZC para buscar o percentual de comissão a ser aplicado.
+//--------------------------------------------------------------------------------
+dbSelectArea("ZZC")
+dbSetOrder(1)
+If dbSeek("0101"+cTipVend+cSitTrib+cCond+cProduto)
+
+	nVal0000	:=ZZC->ZZC_0000 
+	nVal0025	:=ZZC->ZZC_0025
+	nVal0050	:=ZZC->ZZC_0050	
+	nVal0075	:=ZZC->ZZC_0075
+	nVal0100	:=ZZC->ZZC_0100
+   	nVal0125	:=ZZC->ZZC_0125 
+	nVal0150	:=ZZC->ZZC_0150               
+	nVal0175	:=ZZC->ZZC_0175               
+	nVal0200	:=ZZC->ZZC_0200
+	nVal0225	:=ZZC->ZZC_0225
+ 	nVal0250	:=ZZC->ZZC_0250    
+	nVal0275	:=ZZC->ZZC_0275
+	nVal0300	:=ZZC->ZZC_0300
+	nVal0325	:=ZZC->ZZC_0325
+	nVal0350	:=ZZC->ZZC_0350
+	nVal0375	:=ZZC->ZZC_0375                      
+	nVal0400	:=ZZC->ZZC_0400 
+	nVal0500 	:=ZZC->ZZC_0500 
+	nVal0600 	:=ZZC->ZZC_0600
+	nVal0700 	:=ZZC->ZZC_0700			       
+	nVal0800 	:=ZZC->ZZC_0800
+	nVal0900 	:=ZZC->ZZC_0900
+	nVal1000 	:=ZZC->ZZC_1000
+	nVal1100 	:=ZZC->ZZC_1100
+	nVal1200 	:=ZZC->ZZC_1200 
+	nVal1300 	:=ZZC->ZZC_1300 
+	nVal1400 	:=ZZC->ZZC_1400
+	nVal1500 	:=ZZC->ZZC_1500
+	
+	//--Vendedor	
+	If cTipVend == "2" 
+	
+		If 	nPrcVen >= nVal0000	 .And. nPrcVen < nVal0025 .Or. nVal0025 == 0	
+			nPercent:=0
+		ElseIf nPrcVen >= nVal0025  .And. (nPrcVen < nVal0050 .Or. nVal0050 == 0) 
+			nPercent:=0.25	
+		ElseIf nPrcVen >= nVal0050 .And. (nPrcVen < nVal0075 .Or. nVal0075 == 0)
+			nPercent:=0.50		
+		ElseIf  nPrcVen >= nVal0075 .And. (nPrcVen < nVal0100 .Or. nVal0100 == 0) 
+			nPercent:=0.75
+		ElseIf nPrcVen >= nVal0100 .And. (nPrcVen < nVal0125 .Or. nVal0125 == 0) 
+			nPercent:=1
+		ElseIf nPrcVen >= nVal0125 .And. (nPrcVen < nVal0150 .Or. nVal0150 == 0) 
+			nPercent:=1.25			
+		ElseIf nPrcVen >= nVal0150 .And. (nPrcVen < nVal0175 .Or. nVal0175 == 0)
+			nPercent:=1.50
+		ElseIf nPrcVen >= nVal0175 .And. (nPrcVen < nVal0200 .Or. nVal0200 == 0)
+			nPercent:=1.75
+		ElseIf nPrcVen >= nVal0200 .And. (nPrcVen < nVal0225 .Or. nVal0225 == 0)
+			nPercent:=2
+		ElseIf nPrcVen >= nVal0225 .And. (nPrcVen < nVal0250 .Or. nVal0250 == 0)
+			nPercent:=2.25			
+		ElseIf nPrcVen >= nVal0250 .And. (nPrcVen < nVal0275 .Or. nVal0275 == 0)
+			nPercent:=2.50
+		ElseIf nPrcVen >= nVal0275 .And. (nPrcVen < nVal0300 .Or. nVal0300 == 0)
+			nPercent:=2.75
+		ElseIf nPrcVen >= nVal0300 .And. (nPrcVen < nVal0325 .Or. nVal0325 == 0)
+			nPercent:=3
+		ElseIf nPrcVen >= nVal0325 .And. (nPrcVen < nVal0350 .Or. nVal0350 == 0)
+			nPercent:=3.25		
+		ElseIf nPrcVen >= nVal0350 .And. (nPrcVen < nVal0375 .Or. nVal0375 == 0)
+			nPercent:=3.50		
+		ElseIf nPrcVen >= nVal0375  .And. nVal0375 != 0
+			nPercent:=3.75		
+		EndIf		
+	EndIf
+
+	//--Representante	
+	If cTipVend == "4" 
+	
+		If 	nPrcVen >= nVal0000  .And. nPrcVen < nVal0100 .Or. nVal0100 == 0	
+			nPercent:=0
+		ElseIf nPrcVen >= nVal0100 .And. (nPrcVen < nVal0200 .Or. nVal0200 == 0)
+			nPercent:=1		
+		ElseIf nPrcVen >= nVal0200 .And. (nPrcVen < nVal0300 .Or. nVal0300 == 0) 
+			nPercent:=2
+		ElseIf nPrcVen >= nVal0300 .And. (nPrcVen < nVal0400 .Or. nVal0400 == 0)
+			nPercent:=3
+		ElseIf nPrcVen >= nVal0400 .And.(nPrcVen < nVal0500 .Or. nVal0500 == 0)
+			nPercent:=4
+		ElseIf nPrcVen >= nVal0500 .And. (nPrcVen < nVal0600 .Or. nVal0600 == 0)
+			nPercent:=5
+		ElseIf nPrcVen >= nVal0600 .And. (nPrcVen < nVal0700 .Or. nVal0700 == 0)
+			nPercent:=6
+		ElseIf nPrcVen >= nVal0700 .And. (nPrcVen < nVal0800 .Or. nVal0800 == 0)
+			nPercent:=7
+		ElseIf nPrcVen >= nVal0800 .And. (nPrcVen < nVal0900 .Or. nVal0900 == 0)
+			nPercent:=8	
+		ElseIf nPrcVen >= nVal0900 .And. (nPrcVen < nVal1000 .Or. nVal1000 == 0)
+			nPercent:=9
+		ElseIf nPrcVen >= nVal1000 .And. (nPrcVen < nVal1100 .Or. nVal1100 == 0)
+			nPercent:=10		
+		ElseIf nPrcVen >= nVal1100 .And. (nPrcVen < nVal1200 .Or. nVal1200 == 0)
+			nPercent:=11
+		ElseIf nPrcVen >= nVal1200 .And. (nPrcVen < nVal1300 .Or. nVal1300 == 0)
+			nPercent:=12		
+		ElseIf nPrcVen >= nVal1300 .And. (nPrcVen < nVal1400 .Or. nVal1400 == 0)
+			nPercent:=13
+		ElseIf nPrcVen >= nVal1400 .And. (nPrcVen < nVal1500 .Or. nVal1500 == 0)
+			nPercent:=14
+		ElseIf nPrcVen >= nVal1500  .And. nVal1500 != 0
+			nPercent:=15
+		EndIf
+	EndIf
+	
+	nValComiss:= (nBaseComiss * nPercent)/100
+	
+EndIf
+
+Return(nValComiss)
+
+
+
+
+
+//--------------------------------------------------------------------------
+/* {Protheus.doc} FA440ZZD
+Função para recalculo de comissão Nutratta. Tabela modelo novo.
+Tabela: ZZD -Tabela de comissionamento. 13/04/2017.
+
+Retorno
+Valor de comissão calculado.
+
+Empresa - Copyright -Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 01/03/2017
+@version P11 R8
+*/
+//--------------------------------------------------------------------------
+Static Function FA440ZZD(cProduto,nFreteI,nPrcVen,nPrcTot,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nQuant,nQTdParc)
+
+Local 	cSitTrib	:="" 	//Dentro ou fora de GO
+Local 	cTipVend	:="" 	// Vendedor ou representante comercial.
+Local 	nVal0		:=0
+Local 	nVal05		:=0
+Local	nVal1		:=0
+Local	nVal15		:=0
+Local	nVal2		:=0
+Local	nVal25		:=0
+Local	nVal3		:=0
+Local	nVal35		:=0
+Local	nVal4		:=0
+Local	nVal5		:=0
+Local	nVal6		:=0
+Local	nVal7		:=0
+Local   nValImposto	:=0
+Local   nValEncarg 	:=0
+Local   nValAbat	:=0        
+Local 	nPrcUnitot	:=0 
+Local 	nPrTotProp	:=0
+Local   nPercentX	:=0
+//--------------------------------------------------------------------------------
+//Posiciona na SA3 para buscar as informações do Vendedor/Representante.
+//--------------------------------------------------------------------------------
+dbSelectArea("SA3")
+dbSetOrder(1)
+If dbSeek(xFilial("SA3")+cVendedor)
+
+	cTipVend	:=SA3->A3_TIPVEND //1=Cooperativa;2=Funcionario;3=Corretora;4=Representante
+EndIf
+
+//--------------------------------------------------------------------------------
+//Posiciona na SA1 para buscar a localização do cliente Dentro ou fora do estado
+//--------------------------------------------------------------------------------
+dbSelectArea("SA1")
+dbSetOrder(1)
+If dbSeek(xFilial("SA1")+cCliente+cLoja)
+
+	cEstado:=SA1->A1_EST 
+	
+	If  cEstado $ "GO"
+		cSitTrib:="D"
+		nImposto	:= 9.25/100  //0.0925        
+	Else
+		cSitTrib:="F"
+		nImposto	:= 14.05/100  //0.1405
+	EndIf	
+ 	 //=R18-Q18-(((R18*S18)))-((R18*T18))
+	/*  Calculo para baixa Total 
+    nValImposto	:=(nPrcTot*nImposto)
+//  nValEncarg 	:=(nPrcTot*nEncarg)/100 
+//	 nValAbat	:= nValImposto+nValEncarg 
+    
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nPrcTot-nFreteI-nValAbat)/nQTdParc
+	*/
+    
+	//--Calculo para baixa Parcial após 22/03/2017 
+    nPercentX	:=((nValBx*100)/nValOrig)
+    nValImposto	:=nPercentX*(nPrcTot*nImposto)/100
+    nValEncarg 	:=nPercentX*((nPrcTot*nEncarg)/100)/100 
+    nValAbat	:= nValImposto+nValEncarg 
+    
+    //--Retirar  proporcional por produto
+    nPrcUnitot	:=nQuant*nPrcVen 
+    nPrTotProp	:= (nPercentX* nPrcTot)/100
+   	
+   	//--Retirar frete proporcional.
+    nFreteI		:= (nPercentX*nFreteI)/100	//nFreteI*(nValBx*100/nPrcTot)/100
+
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nPrTotProp-nFreteI-nValAbat)/nQTdParc  
+
+EndIf
+
+
+//--------------------------------------------------------------------------------
+//Posiciona na ZZD para buscar o percentual de comissão a ser aplicado.
+//--------------------------------------------------------------------------------
+dbSelectArea("ZZD")
+dbSetOrder(1)
+If dbSeek("0101"+cTipVend+cSitTrib+cCond+cProduto)
+
+	nVal0000	:=ZZD->ZZD_0000 
+	nVal0025	:=ZZD->ZZD_0025
+	nVal0050	:=ZZD->ZZD_0050	
+	nVal0075	:=ZZD->ZZD_0075
+	nVal0100	:=ZZD->ZZD_0100
+   	nVal0125	:=ZZD->ZZD_0125 
+	nVal0150	:=ZZD->ZZD_0150               
+	nVal0175	:=ZZD->ZZD_0175               
+	nVal0200	:=ZZD->ZZD_0200
+	nVal0225	:=ZZD->ZZD_0225
+ 	nVal0250	:=ZZD->ZZD_0250    
+	nVal0275	:=ZZD->ZZD_0275
+	nVal0300	:=ZZD->ZZD_0300
+	nVal0325	:=ZZD->ZZD_0325
+	nVal0350	:=ZZD->ZZD_0350
+	nVal0375	:=ZZD->ZZD_0375                      
+	nVal0400	:=ZZD->ZZD_0400 
+	nVal0500 	:=ZZD->ZZD_0500 
+	nVal0600 	:=ZZD->ZZD_0600
+	nVal0700 	:=ZZD->ZZD_0700			       
+	nVal0800 	:=ZZD->ZZD_0800
+	nVal0900 	:=ZZD->ZZD_0900
+	nVal1000 	:=ZZD->ZZD_1000
+	nVal1100 	:=ZZD->ZZD_1100
+	nVal1200 	:=ZZD->ZZD_1200 
+	nVal1300 	:=ZZD->ZZD_1300 
+	nVal1400 	:=ZZD->ZZD_1400
+	nVal1500 	:=ZZD->ZZD_1500
+	
+	//--Vendedor	
+	If cTipVend == "2" 
+	
+		If 	nPrcVen >= nVal0000	 .And. nPrcVen < nVal0025 .Or. nVal0025 == 0	
+			nPercent:=0
+		ElseIf nPrcVen >= nVal0025  .And. (nPrcVen < nVal0050 .Or. nVal0050 == 0) 
+			nPercent:=0.25	
+		ElseIf nPrcVen >= nVal0050 .And. (nPrcVen < nVal0075 .Or. nVal0075 == 0)
+			nPercent:=0.50		
+		ElseIf  nPrcVen >= nVal0075 .And. (nPrcVen < nVal0100 .Or. nVal0100 == 0) 
+			nPercent:=0.75
+		ElseIf nPrcVen >= nVal0100 .And. (nPrcVen < nVal0125 .Or. nVal0125 == 0) 
+			nPercent:=1
+		ElseIf nPrcVen >= nVal0125 .And. (nPrcVen < nVal0150 .Or. nVal0150 == 0) 
+			nPercent:=1.25			
+		ElseIf nPrcVen >= nVal0150 .And. (nPrcVen < nVal0175 .Or. nVal0175 == 0)
+			nPercent:=1.50
+		ElseIf nPrcVen >= nVal0175 .And. (nPrcVen < nVal0200 .Or. nVal0200 == 0)
+			nPercent:=1.75
+		ElseIf nPrcVen >= nVal0200 .And. (nPrcVen < nVal0225 .Or. nVal0225 == 0)
+			nPercent:=2
+		ElseIf nPrcVen >= nVal0225 .And. (nPrcVen < nVal0250 .Or. nVal0250 == 0)
+			nPercent:=2.25			
+		ElseIf nPrcVen >= nVal0250 .And. (nPrcVen < nVal0275 .Or. nVal0275 == 0)
+			nPercent:=2.50
+		ElseIf nPrcVen >= nVal0275 .And. (nPrcVen < nVal0300 .Or. nVal0300 == 0)
+			nPercent:=2.75
+		ElseIf nPrcVen >= nVal0300 .And. (nPrcVen < nVal0325 .Or. nVal0325 == 0)
+			nPercent:=3
+		ElseIf nPrcVen >= nVal0325 .And. (nPrcVen < nVal0350 .Or. nVal0350 == 0)
+			nPercent:=3.25		
+		ElseIf nPrcVen >= nVal0350 .And. (nPrcVen < nVal0375 .Or. nVal0375 == 0)
+			nPercent:=3.50		
+		ElseIf nPrcVen >= nVal0375  .And. nVal0375 != 0
+			nPercent:=3.75		
+		EndIf		
+	EndIf
+
+	//--Representante	
+	If cTipVend == "4" 
+	
+		If 	nPrcVen >= nVal0000  .And. nPrcVen < nVal0100 .Or. nVal0100 == 0	
+			nPercent:=0
+		ElseIf nPrcVen >= nVal0100 .And. (nPrcVen < nVal0200 .Or. nVal0200 == 0)
+			nPercent:=1		
+		ElseIf nPrcVen >= nVal0200 .And. (nPrcVen < nVal0300 .Or. nVal0300 == 0) 
+			nPercent:=2
+		ElseIf nPrcVen >= nVal0300 .And. (nPrcVen < nVal0400 .Or. nVal0400 == 0)
+			nPercent:=3
+		ElseIf nPrcVen >= nVal0400 .And.(nPrcVen < nVal0500 .Or. nVal0500 == 0)
+			nPercent:=4
+		ElseIf nPrcVen >= nVal0500 .And. (nPrcVen < nVal0600 .Or. nVal0600 == 0)
+			nPercent:=5
+		ElseIf nPrcVen >= nVal0600 .And. (nPrcVen < nVal0700 .Or. nVal0700 == 0)
+			nPercent:=6
+		ElseIf nPrcVen >= nVal0700 .And. (nPrcVen < nVal0800 .Or. nVal0800 == 0)
+			nPercent:=7
+		ElseIf nPrcVen >= nVal0800 .And. (nPrcVen < nVal0900 .Or. nVal0900 == 0)
+			nPercent:=8	
+		ElseIf nPrcVen >= nVal0900 .And. (nPrcVen < nVal1000 .Or. nVal1000 == 0)
+			nPercent:=9
+		ElseIf nPrcVen >= nVal1000 .And. (nPrcVen < nVal1100 .Or. nVal1100 == 0)
+			nPercent:=10		
+		ElseIf nPrcVen >= nVal1100 .And. (nPrcVen < nVal1200 .Or. nVal1200 == 0)
+			nPercent:=11
+		ElseIf nPrcVen >= nVal1200 .And. (nPrcVen < nVal1300 .Or. nVal1300 == 0)
+			nPercent:=12		
+		ElseIf nPrcVen >= nVal1300 .And. (nPrcVen < nVal1400 .Or. nVal1400 == 0)
+			nPercent:=13
+		ElseIf nPrcVen >= nVal1400 .And. (nPrcVen < nVal1500 .Or. nVal1500 == 0)
+			nPercent:=14
+		ElseIf nPrcVen >= nVal1500  .And. nVal1500 != 0
+			nPercent:=15
+		EndIf
+	EndIf
+	
+	nValComiss:= (nBaseComiss * nPercent)/100
+	
+EndIf
+
+Return(nValComiss)
+      
+
+
+//--------------------------------------------------------------------------
+/* {Protheus.doc} FA440ZZE
+Função para recalculo de comissão Nutratta. Tabela modelo novo.
+Tabela: ZZE -Tabela de comissionamento. 08/05/2017.
+
+Retorno
+Valor de comissão calculado.
+
+Empresa - Copyright -Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 30/05/2017
+@version P11 R8
+*/
+//--------------------------------------------------------------------------
+Static Function FA440ZZE(cProduto,nFreteI,nPrcVen,nPrcTot,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nQuant,nQTdParc)
+
+Local 	cSitTrib	:="" 	//Dentro ou fora de GO
+Local 	cTipVend	:="" 	// Vendedor ou representante comercial.
+Local 	nVal0		:=0
+Local 	nVal05		:=0
+Local	nVal1		:=0
+Local	nVal15		:=0
+Local	nVal2		:=0
+Local	nVal25		:=0
+Local	nVal3		:=0
+Local	nVal35		:=0
+Local	nVal4		:=0
+Local	nVal5		:=0
+Local	nVal6		:=0
+Local	nVal7		:=0
+Local   nValImposto	:=0
+Local   nValEncarg 	:=0
+Local   nValAbat	:=0        
+Local 	nPrcUnitot	:=0 
+Local 	nPrTotProp	:=0
+Local   nPercentX	:=0
+//--------------------------------------------------------------------------------
+//Posiciona na SA3 para buscar as informações do Vendedor/Representante.
+//--------------------------------------------------------------------------------
+dbSelectArea("SA3")
+dbSetOrder(1)
+If dbSeek(xFilial("SA3")+cVendedor)
+
+	cTipVend	:=SA3->A3_TIPVEND //1=Cooperativa;2=Funcionario;3=Corretora;4=Representante
+EndIf
+
+//--------------------------------------------------------------------------------
+//Posiciona na SA1 para buscar a localização do cliente Dentro ou fora do estado
+//--------------------------------------------------------------------------------
+dbSelectArea("SA1")
+dbSetOrder(1)
+If dbSeek(xFilial("SA1")+cCliente+cLoja)
+
+	cEstado:=SA1->A1_EST 
+	
+	If  cEstado $ "GO"
+		cSitTrib:="D"
+		nImposto	:= 9.25/100  //0.0925        
+	Else
+		cSitTrib:="F"
+		nImposto	:= 14.05/100  //0.1405
+	EndIf	
+ 	 //=R18-Q18-(((R18*S18)))-((R18*T18))
+	/*  Calculo para baixa Total 
+    nValImposto	:=(nPrcTot*nImposto)
+//  nValEncarg 	:=(nPrcTot*nEncarg)/100 
+//	 nValAbat	:= nValImposto+nValEncarg 
+    
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nPrcTot-nFreteI-nValAbat)/nQTdParc
+	*/
+    
+	//--Calculo para baixa Parcial após 22/03/2017 
+    nPercentX	:=((nValBx*100)/nValOrig)
+    nValImposto	:=nPercentX*(nPrcTot*nImposto)/100
+    nValEncarg 	:=nPercentX*((nPrcTot*nEncarg)/100)/100 
+    nValAbat	:= nValImposto+nValEncarg 
+    
+    //--Retirar  proporcional por produto
+    nPrcUnitot	:=nQuant*nPrcVen 
+    nPrTotProp	:= (nPercentX* nPrcTot)/100
+   	
+   	//--Retirar frete proporcional.
+    nFreteI		:= (nPercentX*nFreteI)/100	//nFreteI*(nValBx*100/nPrcTot)/100
+
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nPrTotProp-nFreteI-nValAbat)/nQTdParc  
+
+EndIf
+
+
+//--------------------------------------------------------------------------------
+//Posiciona na ZZE para buscar o percentual de comissão a ser aplicado.
+//--------------------------------------------------------------------------------
+dbSelectArea("ZZE")
+dbSetOrder(1)
+If dbSeek("0101"+cTipVend+cSitTrib+cCond+cProduto)
+
+	nVal0000	:=ZZE->ZZE_0000 
+	nVal0025	:=ZZE->ZZE_0025
+	nVal0050	:=ZZE->ZZE_0050	
+	nVal0075	:=ZZE->ZZE_0075
+	nVal0100	:=ZZE->ZZE_0100
+   	nVal0125	:=ZZE->ZZE_0125 
+	nVal0150	:=ZZE->ZZE_0150               
+	nVal0175	:=ZZE->ZZE_0175               
+	nVal0200	:=ZZE->ZZE_0200
+	nVal0225	:=ZZE->ZZE_0225
+ 	nVal0250	:=ZZE->ZZE_0250    
+	nVal0275	:=ZZE->ZZE_0275
+	nVal0300	:=ZZE->ZZE_0300
+	nVal0325	:=ZZE->ZZE_0325
+	nVal0350	:=ZZE->ZZE_0350
+	nVal0375	:=ZZE->ZZE_0375                      
+	nVal0400	:=ZZE->ZZE_0400 
+	nVal0500 	:=ZZE->ZZE_0500 
+	nVal0600 	:=ZZE->ZZE_0600
+	nVal0700 	:=ZZE->ZZE_0700			       
+	nVal0800 	:=ZZE->ZZE_0800
+	nVal0900 	:=ZZE->ZZE_0900
+	nVal1000 	:=ZZE->ZZE_1000
+	nVal1100 	:=ZZE->ZZE_1100
+	nVal1200 	:=ZZE->ZZE_1200 
+	nVal1300 	:=ZZE->ZZE_1300 
+	nVal1400 	:=ZZE->ZZE_1400
+	nVal1500 	:=ZZE->ZZE_1500
+	
+	//--Vendedor	
+	If cTipVend == "2" 
+	
+		If 	nPrcVen >= nVal0000	 .And. nPrcVen < nVal0025 .Or. nVal0025 == 0	
+			nPercent:=0
+		ElseIf nPrcVen >= nVal0025  .And. (nPrcVen < nVal0050 .Or. nVal0050 == 0) 
+			nPercent:=0.25	
+		ElseIf nPrcVen >= nVal0050 .And. (nPrcVen < nVal0075 .Or. nVal0075 == 0)
+			nPercent:=0.50		
+		ElseIf  nPrcVen >= nVal0075 .And. (nPrcVen < nVal0100 .Or. nVal0100 == 0) 
+			nPercent:=0.75
+		ElseIf nPrcVen >= nVal0100 .And. (nPrcVen < nVal0125 .Or. nVal0125 == 0) 
+			nPercent:=1
+		ElseIf nPrcVen >= nVal0125 .And. (nPrcVen < nVal0150 .Or. nVal0150 == 0) 
+			nPercent:=1.25			
+		ElseIf nPrcVen >= nVal0150 .And. (nPrcVen < nVal0175 .Or. nVal0175 == 0)
+			nPercent:=1.50
+		ElseIf nPrcVen >= nVal0175 .And. (nPrcVen < nVal0200 .Or. nVal0200 == 0)
+			nPercent:=1.75
+		ElseIf nPrcVen >= nVal0200 .And. (nPrcVen < nVal0225 .Or. nVal0225 == 0)
+			nPercent:=2
+		ElseIf nPrcVen >= nVal0225 .And. (nPrcVen < nVal0250 .Or. nVal0250 == 0)
+			nPercent:=2.25			
+		ElseIf nPrcVen >= nVal0250 .And. (nPrcVen < nVal0275 .Or. nVal0275 == 0)
+			nPercent:=2.50
+		ElseIf nPrcVen >= nVal0275 .And. (nPrcVen < nVal0300 .Or. nVal0300 == 0)
+			nPercent:=2.75
+		ElseIf nPrcVen >= nVal0300 .And. (nPrcVen < nVal0325 .Or. nVal0325 == 0)
+			nPercent:=3
+		ElseIf nPrcVen >= nVal0325 .And. (nPrcVen < nVal0350 .Or. nVal0350 == 0)
+			nPercent:=3.25		
+		ElseIf nPrcVen >= nVal0350 .And. (nPrcVen < nVal0375 .Or. nVal0375 == 0)
+			nPercent:=3.50		
+		ElseIf nPrcVen >= nVal0375  .And. nVal0375 != 0
+			nPercent:=3.75		
+		EndIf		
+	EndIf
+
+	//--Representante	
+	If cTipVend == "4" 
+	
+		If 	nPrcVen >= nVal0000  .And. nPrcVen < nVal0100 .Or. nVal0100 == 0	
+			nPercent:=0
+		ElseIf nPrcVen >= nVal0100 .And. (nPrcVen < nVal0200 .Or. nVal0200 == 0)
+			nPercent:=1		
+		ElseIf nPrcVen >= nVal0200 .And. (nPrcVen < nVal0300 .Or. nVal0300 == 0) 
+			nPercent:=2
+		ElseIf nPrcVen >= nVal0300 .And. (nPrcVen < nVal0400 .Or. nVal0400 == 0)
+			nPercent:=3
+		ElseIf nPrcVen >= nVal0400 .And.(nPrcVen < nVal0500 .Or. nVal0500 == 0)
+			nPercent:=4
+		ElseIf nPrcVen >= nVal0500 .And. (nPrcVen < nVal0600 .Or. nVal0600 == 0)
+			nPercent:=5
+		ElseIf nPrcVen >= nVal0600 .And. (nPrcVen < nVal0700 .Or. nVal0700 == 0)
+			nPercent:=6
+		ElseIf nPrcVen >= nVal0700 .And. (nPrcVen < nVal0800 .Or. nVal0800 == 0)
+			nPercent:=7
+		ElseIf nPrcVen >= nVal0800 .And. (nPrcVen < nVal0900 .Or. nVal0900 == 0)
+			nPercent:=8	
+		ElseIf nPrcVen >= nVal0900 .And. (nPrcVen < nVal1000 .Or. nVal1000 == 0)
+			nPercent:=9
+		ElseIf nPrcVen >= nVal1000 .And. (nPrcVen < nVal1100 .Or. nVal1100 == 0)
+			nPercent:=10		
+		ElseIf nPrcVen >= nVal1100 .And. (nPrcVen < nVal1200 .Or. nVal1200 == 0)
+			nPercent:=11
+		ElseIf nPrcVen >= nVal1200 .And. (nPrcVen < nVal1300 .Or. nVal1300 == 0)
+			nPercent:=12		
+		ElseIf nPrcVen >= nVal1300 .And. (nPrcVen < nVal1400 .Or. nVal1400 == 0)
+			nPercent:=13
+		ElseIf nPrcVen >= nVal1400 .And. (nPrcVen < nVal1500 .Or. nVal1500 == 0)
+			nPercent:=14
+		ElseIf nPrcVen >= nVal1500  .And. nVal1500 != 0
+			nPercent:=15
+		EndIf
+	EndIf
+	
+	nValComiss:= (nBaseComiss * nPercent)/100
+	
+EndIf
+
+Return(nValComiss)
+
+
+
+
+
+//--------------------------------------------------------------------------
+/* {Protheus.doc} FA440ZZF
+Função para recalculo de comissão Nutratta. Tabela modelo novo.
+Tabela: ZZF -Tabela de comissionamento. 03/06/2017.
+
+Retorno
+Valor de comissão calculado.
+
+Empresa - Copyright -Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 26/06/2017
+@version P11 R8
+*/
+//--------------------------------------------------------------------------
+Static Function FA440ZZF(cProduto,nFreteI,nPrcVen,nPrcTot,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nQuant,nQTdParc)
+
+Local 	cSitTrib	:="" 	//Dentro ou fora de GO
+Local 	cTipVend	:="" 	// Vendedor ou representante comercial.
+Local 	nVal0		:=0
+Local 	nVal05		:=0
+Local	nVal1		:=0
+Local	nVal15		:=0
+Local	nVal2		:=0
+Local	nVal25		:=0
+Local	nVal3		:=0
+Local	nVal35		:=0
+Local	nVal4		:=0
+Local	nVal5		:=0
+Local	nVal6		:=0
+Local	nVal7		:=0
+Local   nValImposto	:=0
+Local   nValEncarg 	:=0
+Local   nValAbat	:=0        
+Local 	nPrcUnitot	:=0 
+Local 	nPrTotProp	:=0
+Local   nPercentX	:=0
+//--------------------------------------------------------------------------------
+//Posiciona na SA3 para buscar as informações do Vendedor/Representante.
+//--------------------------------------------------------------------------------
+dbSelectArea("SA3")
+dbSetOrder(1)
+If dbSeek(xFilial("SA3")+cVendedor)
+
+	cTipVend	:=SA3->A3_TIPVEND //1=Cooperativa;2=Funcionario;3=Corretora;4=Representante
+EndIf
+
+//--------------------------------------------------------------------------------
+//Posiciona na SA1 para buscar a localização do cliente Dentro ou fora do estado
+//--------------------------------------------------------------------------------
+dbSelectArea("SA1")
+dbSetOrder(1)
+If dbSeek(xFilial("SA1")+cCliente+cLoja)
+
+	cEstado:=SA1->A1_EST 
+	
+	If  cEstado $ "GO"
+		cSitTrib:="D"
+		nImposto	:= 9.25/100  //0.0925        
+	Else
+		cSitTrib:="F"
+		nImposto	:= 14.05/100  //0.1405
+	EndIf	
+ 	 //=R18-Q18-(((R18*S18)))-((R18*T18))
+	/*  Calculo para baixa Total 
+    nValImposto	:=(nPrcTot*nImposto)
+//  nValEncarg 	:=(nPrcTot*nEncarg)/100 
+//	 nValAbat	:= nValImposto+nValEncarg 
+    
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nPrcTot-nFreteI-nValAbat)/nQTdParc
+	*/
+    
+	//--Calculo para baixa Parcial após 22/03/2017 
+    nPercentX	:=((nValBx*100)/nValOrig)
+    nValImposto	:=nPercentX*(nPrcTot*nImposto)/100
+    nValEncarg 	:=nPercentX*((nPrcTot*nEncarg)/100)/100 
+    nValAbat	:= nValImposto+nValEncarg 
+    
+    //--Retirar  proporcional por produto
+    nPrcUnitot	:=nQuant*nPrcVen 
+    nPrTotProp	:= (nPercentX* nPrcTot)/100
+   	
+   	//--Retirar frete proporcional.
+    nFreteI		:= (nPercentX*nFreteI)/100	//nFreteI*(nValBx*100/nPrcTot)/100
+
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nPrTotProp-nFreteI-nValAbat)/nQTdParc  
+
+EndIf
+
+
+//--------------------------------------------------------------------------------
+//Posiciona na ZZE para buscar o percentual de comissão a ser aplicado.
+//--------------------------------------------------------------------------------
+dbSelectArea("ZZF")
+dbSetOrder(1)
+If dbSeek("0101"+cTipVend+cSitTrib+cCond+cProduto)
+
+	nVal0000	:=ZZF->ZZF_0000 
+	nVal0025	:=ZZF->ZZF_0025
+	nVal0050	:=ZZF->ZZF_0050	
+	nVal0075	:=ZZF->ZZF_0075
+	nVal0100	:=ZZF->ZZF_0100
+   	nVal0125	:=ZZF->ZZF_0125 
+	nVal0150	:=ZZF->ZZF_0150               
+	nVal0175	:=ZZF->ZZF_0175               
+	nVal0200	:=ZZF->ZZF_0200
+	nVal0225	:=ZZF->ZZF_0225
+ 	nVal0250	:=ZZF->ZZF_0250    
+	nVal0275	:=ZZF->ZZF_0275
+	nVal0300	:=ZZF->ZZF_0300
+	nVal0325	:=ZZF->ZZF_0325
+	nVal0350	:=ZZF->ZZF_0350
+	nVal0375	:=ZZF->ZZF_0375                      
+	nVal0400	:=ZZF->ZZF_0400 
+	nVal0500 	:=ZZF->ZZF_0500 
+	nVal0600 	:=ZZF->ZZF_0600
+	nVal0700 	:=ZZF->ZZF_0700			       
+	nVal0800 	:=ZZF->ZZF_0800
+	nVal0900 	:=ZZF->ZZF_0900
+	nVal1000 	:=ZZF->ZZF_1000
+	nVal1100 	:=ZZF->ZZF_1100
+	nVal1200 	:=ZZF->ZZF_1200 
+	nVal1300 	:=ZZF->ZZF_1300 
+	nVal1400 	:=ZZF->ZZF_1400
+	nVal1500 	:=ZZF->ZZF_1500
+	
+	//--Vendedor	
+	If cTipVend == "2" 
+	
+		If 	nPrcVen >= nVal0000	 .And. nPrcVen < nVal0025 .Or. nVal0025 == 0	
+			nPercent:=0
+		ElseIf nPrcVen >= nVal0025  .And. (nPrcVen < nVal0050 .Or. nVal0050 == 0) 
+			nPercent:=0.25	
+		ElseIf nPrcVen >= nVal0050 .And. (nPrcVen < nVal0075 .Or. nVal0075 == 0)
+			nPercent:=0.50		
+		ElseIf  nPrcVen >= nVal0075 .And. (nPrcVen < nVal0100 .Or. nVal0100 == 0) 
+			nPercent:=0.75
+		ElseIf nPrcVen >= nVal0100 .And. (nPrcVen < nVal0125 .Or. nVal0125 == 0) 
+			nPercent:=1
+		ElseIf nPrcVen >= nVal0125 .And. (nPrcVen < nVal0150 .Or. nVal0150 == 0) 
+			nPercent:=1.25			
+		ElseIf nPrcVen >= nVal0150 .And. (nPrcVen < nVal0175 .Or. nVal0175 == 0)
+			nPercent:=1.50
+		ElseIf nPrcVen >= nVal0175 .And. (nPrcVen < nVal0200 .Or. nVal0200 == 0)
+			nPercent:=1.75
+		ElseIf nPrcVen >= nVal0200 .And. (nPrcVen < nVal0225 .Or. nVal0225 == 0)
+			nPercent:=2
+		ElseIf nPrcVen >= nVal0225 .And. (nPrcVen < nVal0250 .Or. nVal0250 == 0)
+			nPercent:=2.25			
+		ElseIf nPrcVen >= nVal0250 .And. (nPrcVen < nVal0275 .Or. nVal0275 == 0)
+			nPercent:=2.50
+		ElseIf nPrcVen >= nVal0275 .And. (nPrcVen < nVal0300 .Or. nVal0300 == 0)
+			nPercent:=2.75
+		ElseIf nPrcVen >= nVal0300 .And. (nPrcVen < nVal0325 .Or. nVal0325 == 0)
+			nPercent:=3
+		ElseIf nPrcVen >= nVal0325 .And. (nPrcVen < nVal0350 .Or. nVal0350 == 0)
+			nPercent:=3.25		
+		ElseIf nPrcVen >= nVal0350 .And. (nPrcVen < nVal0375 .Or. nVal0375 == 0)
+			nPercent:=3.50		
+		ElseIf nPrcVen >= nVal0375  .And. nVal0375 != 0
+			nPercent:=3.75		
+		EndIf		
+	EndIf
+
+	//--Representante	
+	If cTipVend == "4" 
+	
+		If 	nPrcVen >= nVal0000  .And. nPrcVen < nVal0100 .Or. nVal0100 == 0	
+			nPercent:=0
+		ElseIf nPrcVen >= nVal0100 .And. (nPrcVen < nVal0200 .Or. nVal0200 == 0)
+			nPercent:=1		
+		ElseIf nPrcVen >= nVal0200 .And. (nPrcVen < nVal0300 .Or. nVal0300 == 0) 
+			nPercent:=2
+		ElseIf nPrcVen >= nVal0300 .And. (nPrcVen < nVal0400 .Or. nVal0400 == 0)
+			nPercent:=3
+		ElseIf nPrcVen >= nVal0400 .And.(nPrcVen < nVal0500 .Or. nVal0500 == 0)
+			nPercent:=4
+		ElseIf nPrcVen >= nVal0500 .And. (nPrcVen < nVal0600 .Or. nVal0600 == 0)
+			nPercent:=5
+		ElseIf nPrcVen >= nVal0600 .And. (nPrcVen < nVal0700 .Or. nVal0700 == 0)
+			nPercent:=6
+		ElseIf nPrcVen >= nVal0700 .And. (nPrcVen < nVal0800 .Or. nVal0800 == 0)
+			nPercent:=7
+		ElseIf nPrcVen >= nVal0800 .And. (nPrcVen < nVal0900 .Or. nVal0900 == 0)
+			nPercent:=8	
+		ElseIf nPrcVen >= nVal0900 .And. (nPrcVen < nVal1000 .Or. nVal1000 == 0)
+			nPercent:=9
+		ElseIf nPrcVen >= nVal1000 .And. (nPrcVen < nVal1100 .Or. nVal1100 == 0)
+			nPercent:=10		
+		ElseIf nPrcVen >= nVal1100 .And. (nPrcVen < nVal1200 .Or. nVal1200 == 0)
+			nPercent:=11
+		ElseIf nPrcVen >= nVal1200 .And. (nPrcVen < nVal1300 .Or. nVal1300 == 0)
+			nPercent:=12		
+		ElseIf nPrcVen >= nVal1300 .And. (nPrcVen < nVal1400 .Or. nVal1400 == 0)
+			nPercent:=13
+		ElseIf nPrcVen >= nVal1400 .And. (nPrcVen < nVal1500 .Or. nVal1500 == 0)
+			nPercent:=14
+		ElseIf nPrcVen >= nVal1500  .And. nVal1500 != 0
+			nPercent:=15
+		EndIf
+	EndIf
+	
+	nValComiss:= (nBaseComiss * nPercent)/100
+	
+EndIf
+
+Return(nValComiss)
+
+
+
+
+//--------------------------------------------------------------------------
+/* {Protheus.doc} FA440ZZG
+Função para recalculo de comissão Nutratta. Tabela modelo novo.
+Tabela: ZZG -Tabela de comissionamento. 13/06/2017.
+
+Retorno
+Valor de comissão calculado.
+
+Empresa - Copyright -Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 26/06/2017
+@version P11 R8
+*/
+//--------------------------------------------------------------------------
+Static Function FA440ZZG(cProduto,nFreteI,nPrcVen,nPrcTot,cVendedor,cCliente,cLoja,cCond,nEncarg,nQTdParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,nQuant,nQTdParc)
+
+Local 	cSitTrib	:="" 	//Dentro ou fora de GO
+Local 	cTipVend	:="" 	// Vendedor ou representante comercial.
+Local 	nVal0		:=0
+Local 	nVal05		:=0
+Local	nVal1		:=0
+Local	nVal15		:=0
+Local	nVal2		:=0
+Local	nVal25		:=0
+Local	nVal3		:=0
+Local	nVal35		:=0
+Local	nVal4		:=0
+Local	nVal5		:=0
+Local	nVal6		:=0
+Local	nVal7		:=0
+Local   nValImposto	:=0
+Local   nValEncarg 	:=0
+Local   nValAbat	:=0        
+Local 	nPrcUnitot	:=0 
+Local 	nPrTotProp	:=0
+Local   nPercentX	:=0
+//--------------------------------------------------------------------------------
+//Posiciona na SA3 para buscar as informações do Vendedor/Representante.
+//--------------------------------------------------------------------------------
+dbSelectArea("SA3")
+dbSetOrder(1)
+If dbSeek(xFilial("SA3")+cVendedor)
+
+	cTipVend	:=SA3->A3_TIPVEND //1=Cooperativa;2=Funcionario;3=Corretora;4=Representante
+EndIf
+
+//--------------------------------------------------------------------------------
+//Posiciona na SA1 para buscar a localização do cliente Dentro ou fora do estado
+//--------------------------------------------------------------------------------
+dbSelectArea("SA1")
+dbSetOrder(1)
+If dbSeek(xFilial("SA1")+cCliente+cLoja)
+
+	cEstado:=SA1->A1_EST 
+	
+	If  cEstado $ "GO"
+		cSitTrib:="D"
+		nImposto	:= 9.25/100  //0.0925        
+	Else
+		cSitTrib:="F"
+		nImposto	:= 14.05/100  //0.1405
+	EndIf	
+ 	 //=R18-Q18-(((R18*S18)))-((R18*T18))
+	/*  Calculo para baixa Total 
+    nValImposto	:=(nPrcTot*nImposto)
+//  nValEncarg 	:=(nPrcTot*nEncarg)/100 
+//	 nValAbat	:= nValImposto+nValEncarg 
+    
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nPrcTot-nFreteI-nValAbat)/nQTdParc
+	*/
+    
+	//--Calculo para baixa Parcial após 22/03/2017 
+    nPercentX	:=((nValBx*100)/nValOrig)
+    nValImposto	:=nPercentX*(nPrcTot*nImposto)/100
+    nValEncarg 	:=nPercentX*((nPrcTot*nEncarg)/100)/100 
+    nValAbat	:= nValImposto+nValEncarg 
+    
+    //--Retirar  proporcional por produto
+    nPrcUnitot	:=nQuant*nPrcVen 
+    nPrTotProp	:= (nPercentX* nPrcTot)/100
+   	
+   	//--Retirar frete proporcional.
+    nFreteI		:= (nPercentX*nFreteI)/100	//nFreteI*(nValBx*100/nPrcTot)/100
+
+    //--Retirar imposto-frete-encargos
+	nBaseComiss:= (nPrTotProp-nFreteI-nValAbat)/nQTdParc  
+
+EndIf
+
+
+//--------------------------------------------------------------------------------
+//Posiciona na ZZG para buscar o percentual de comissão a ser aplicado.
+//--------------------------------------------------------------------------------
+dbSelectArea("ZZG")
+dbSetOrder(1)
+If dbSeek("0101"+cTipVend+cSitTrib+cCond+cProduto)
+
+	nVal0000	:=ZZG->ZZG_0000 
+	nVal0025	:=ZZG->ZZG_0025
+	nVal0050	:=ZZG->ZZG_0050	
+	nVal0075	:=ZZG->ZZG_0075
+	nVal0100	:=ZZG->ZZG_0100
+   	nVal0125	:=ZZG->ZZG_0125 
+	nVal0150	:=ZZG->ZZG_0150               
+	nVal0175	:=ZZG->ZZG_0175               
+	nVal0200	:=ZZG->ZZG_0200
+	nVal0225	:=ZZG->ZZG_0225
+ 	nVal0250	:=ZZG->ZZG_0250    
+	nVal0275	:=ZZG->ZZG_0275
+	nVal0300	:=ZZG->ZZG_0300
+	nVal0325	:=ZZG->ZZG_0325
+	nVal0350	:=ZZG->ZZG_0350
+	nVal0375	:=ZZG->ZZG_0375                      
+	nVal0400	:=ZZG->ZZG_0400 
+	nVal0500 	:=ZZG->ZZG_0500 
+	nVal0600 	:=ZZG->ZZG_0600
+	nVal0700 	:=ZZG->ZZG_0700			       
+	nVal0800 	:=ZZG->ZZG_0800
+	nVal0900 	:=ZZG->ZZG_0900
+	nVal1000 	:=ZZG->ZZG_1000
+	nVal1100 	:=ZZG->ZZG_1100
+	nVal1200 	:=ZZG->ZZG_1200 
+	nVal1300 	:=ZZG->ZZG_1300 
+	nVal1400 	:=ZZG->ZZG_1400
+	nVal1500 	:=ZZG->ZZG_1500
+	
+	//--Vendedor	
+	If cTipVend == "2" 
+	
+		If 	nPrcVen >= nVal0000	 .And. nPrcVen < nVal0025 .Or. nVal0025 == 0	
+			nPercent:=0
+		ElseIf nPrcVen >= nVal0025  .And. (nPrcVen < nVal0050 .Or. nVal0050 == 0) 
+			nPercent:=0.25	
+		ElseIf nPrcVen >= nVal0050 .And. (nPrcVen < nVal0075 .Or. nVal0075 == 0)
+			nPercent:=0.50		
+		ElseIf  nPrcVen >= nVal0075 .And. (nPrcVen < nVal0100 .Or. nVal0100 == 0) 
+			nPercent:=0.75
+		ElseIf nPrcVen >= nVal0100 .And. (nPrcVen < nVal0125 .Or. nVal0125 == 0) 
+			nPercent:=1
+		ElseIf nPrcVen >= nVal0125 .And. (nPrcVen < nVal0150 .Or. nVal0150 == 0) 
+			nPercent:=1.25			
+		ElseIf nPrcVen >= nVal0150 .And. (nPrcVen < nVal0175 .Or. nVal0175 == 0)
+			nPercent:=1.50
+		ElseIf nPrcVen >= nVal0175 .And. (nPrcVen < nVal0200 .Or. nVal0200 == 0)
+			nPercent:=1.75
+		ElseIf nPrcVen >= nVal0200 .And. (nPrcVen < nVal0225 .Or. nVal0225 == 0)
+			nPercent:=2
+		ElseIf nPrcVen >= nVal0225 .And. (nPrcVen < nVal0250 .Or. nVal0250 == 0)
+			nPercent:=2.25			
+		ElseIf nPrcVen >= nVal0250 .And. (nPrcVen < nVal0275 .Or. nVal0275 == 0)
+			nPercent:=2.50
+		ElseIf nPrcVen >= nVal0275 .And. (nPrcVen < nVal0300 .Or. nVal0300 == 0)
+			nPercent:=2.75
+		ElseIf nPrcVen >= nVal0300 .And. (nPrcVen < nVal0325 .Or. nVal0325 == 0)
+			nPercent:=3
+		ElseIf nPrcVen >= nVal0325 .And. (nPrcVen < nVal0350 .Or. nVal0350 == 0)
+			nPercent:=3.25		
+		ElseIf nPrcVen >= nVal0350 .And. (nPrcVen < nVal0375 .Or. nVal0375 == 0)
+			nPercent:=3.50		
+		ElseIf nPrcVen >= nVal0375  .And. nVal0375 != 0
+			nPercent:=3.75		
+		EndIf		
+	EndIf
+
+	//--Representante	
+	If cTipVend == "4" 
+	
+		If 	nPrcVen >= nVal0000  .And. nPrcVen < nVal0100 .Or. nVal0100 == 0	
+			nPercent:=0
+		ElseIf nPrcVen >= nVal0100 .And. (nPrcVen < nVal0200 .Or. nVal0200 == 0)
+			nPercent:=1		
+		ElseIf nPrcVen >= nVal0200 .And. (nPrcVen < nVal0300 .Or. nVal0300 == 0) 
+			nPercent:=2
+		ElseIf nPrcVen >= nVal0300 .And. (nPrcVen < nVal0400 .Or. nVal0400 == 0)
+			nPercent:=3
+		ElseIf nPrcVen >= nVal0400 .And.(nPrcVen < nVal0500 .Or. nVal0500 == 0)
+			nPercent:=4
+		ElseIf nPrcVen >= nVal0500 .And. (nPrcVen < nVal0600 .Or. nVal0600 == 0)
+			nPercent:=5
+		ElseIf nPrcVen >= nVal0600 .And. (nPrcVen < nVal0700 .Or. nVal0700 == 0)
+			nPercent:=6
+		ElseIf nPrcVen >= nVal0700 .And. (nPrcVen < nVal0800 .Or. nVal0800 == 0)
+			nPercent:=7
+		ElseIf nPrcVen >= nVal0800 .And. (nPrcVen < nVal0900 .Or. nVal0900 == 0)
+			nPercent:=8	
+		ElseIf nPrcVen >= nVal0900 .And. (nPrcVen < nVal1000 .Or. nVal1000 == 0)
+			nPercent:=9
+		ElseIf nPrcVen >= nVal1000 .And. (nPrcVen < nVal1100 .Or. nVal1100 == 0)
+			nPercent:=10		
+		ElseIf nPrcVen >= nVal1100 .And. (nPrcVen < nVal1200 .Or. nVal1200 == 0)
+			nPercent:=11
+		ElseIf nPrcVen >= nVal1200 .And. (nPrcVen < nVal1300 .Or. nVal1300 == 0)
+			nPercent:=12		
+		ElseIf nPrcVen >= nVal1300 .And. (nPrcVen < nVal1400 .Or. nVal1400 == 0)
+			nPercent:=13
+		ElseIf nPrcVen >= nVal1400 .And. (nPrcVen < nVal1500 .Or. nVal1500 == 0)
+			nPercent:=14
+		ElseIf nPrcVen >= nVal1500  .And. nVal1500 != 0
+			nPercent:=15
+		EndIf
+	EndIf
+	
+	nValComiss:= (nBaseComiss * nPercent)/100
+	
+EndIf
+
+Return(nValComiss)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//Incio das gravações.
+
+
+
+
+
+
+
+//--------------------------------------------------------------------------
+/* {Protheus.doc} FA440GRAVA
+Função para gravação na tabela de extrado de comissões.
+
+Tabela: ZZA -Tabela de comissionamento.
+
+Retorno
+Valor de comissão calculado.
+
+Empresa - Copyright -Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 10/03/2017
+@version P11 R8
+*/
+//--------------------------------------------------------------------------
+Static Function FA440GRAVA(xFilialN,cPedido,cNum,dEmissao,cProduto,cDescric,nFretPrd,nTotFrt,nPrcVen,nQuant,nPrcTot,cVendedor,cCliente,cLoja,cCond,cCodTab,cEstado,nImposto,nBaseComiss,nPercent,nValComiss,nEncarg,cCondRel,nQTdParc,cNumParc,nValOrig,dVencOrig,nValSld,nValBx,dtbaixa,cPrefix,cItem,nOpc)
+         
+Local lExist	:=.T.
+Local cNomeVend	:="" 
+Local cCodSup	:=""
+Local cNomSuper	:=""
+Local dDtaVigen	:="" 
+Local cDescCond	:="" 
+Local cDescTab	:=""
+Local nBxPorc	:=(nValBx*100)/nValOrig
+ 
+//--------------------------------------------------------------------------------
+//Posiciona na SA3 para buscar as informações do Vendedor
+//--------------------------------------------------------------------------------
+dbSelectArea("SA3")
+dbSetOrder(1)
+If dbSeek(xFilial("SA3")+cVendedor)
+
+	cNomeVend	:=SA3->A3_NOME 	//Nome do vendedor
+	cCodSup		:=SA3->A3_SUPER //Nome do supervisor
+EndIf 
+
+//--------------------------------------------------------------------------------
+//Posiciona na SA3 para buscar as informações do supervisor.
+//--------------------------------------------------------------------------------
+dbSelectArea("SA3")
+dbSetOrder(1)
+If dbSeek(xFilial("SA3")+cCodSup)
+
+	cNomSuper	:=SA3->A3_NOME //1=Cooperativa;2=Funcionario;3=Corretora;4=Representante
+EndIf  
+
+//--------------------------------------------------------------------------------
+//Busca as informações da tabela de preço. Cabeçalho.
+//--------------------------------------------------------------------------------
+dbSelectArea("DA0")
+dbSetOrder(1)
+If dbSeek(xFilial("DA0")+cCodTab) //DA1_FILIAL+DA1_CODTAB+DA1_CODPRO
+
+	cDescTab	:=DA0->DA0_DESCRI
+EndIf 
+//--------------------------------------------------------------------------------
+//Busca as informações da tabela de preço. Itens
+//--------------------------------------------------------------------------------
+dbSelectArea("DA1")
+dbSetOrder(1)
+If dbSeek(xFilial("DA1")+cCodTab+cProduto) //DA1_FILIAL+DA1_CODTAB+DA1_CODPRO
+
+	dDtaVigen	:=DA1->DA1_DATVIG
+EndIf 
+
+    
+//--------------------------------------------------------------------------------
+//Busca as informações da tabela de preço.
+//--------------------------------------------------------------------------------
+dbSelectArea("SE4")
+dbSetOrder(1)
+If dbSeek(xFilial("SE4")+cCondRel) //E4_FILIAL+E4_CODIGO
+
+	cDescCond:=SE4->E4_DESCRI
+EndIf
+
+
+//--------------------------------------------------------------------------------
+////--Realiza a gravação na tabela ZZA. 
+//--------------------------------------------------------------------------------               
+//Verificar  a chave.
+If nOpc == 1 //Comissao padrao pelo vendedor
+	cChave:= xFilialN+cNum+cNumParc+nSeq+cProduto
+ElseIf nOpc == 2 //Comissao calculada
+	cChave:= xFilialN+cNum+cNumParc+cItem+cProduto
+EndIf
+
+dbSelectArea("ZZA")
+dbSetOrder(1)
+If dbSeek(cChave) //ZZA_FILIAL+ZZA_NOTA
+	lExist	:=.F. 
+Else
+	lExist	:=.T.
+EndIf 
+
+dbSelectArea("ZZA")
+RecLock("ZZA",lExist)
+	Replace	ZZA->ZZA_FILIAL  With xFilialN
+	Replace	ZZA->ZZA_NOTA	 With cNum
+	Replace	ZZA->ZZA_NUM	 With cPedido 
+	Replace	ZZA->ZZA_EMISSA  With dEmissao
+	Replace	ZZA->ZZA_TABELA  With cCodTab  
+	Replace	ZZA->ZZA_DESTAB  With cDescTab
+	Replace	ZZA->ZZA_VIGENC  With dEmissao
+	Replace	ZZA->ZZA_CLIENT  With cCliente
+	Replace	ZZA->ZZA_LOJA 	 With cLoja
+	Replace	ZZA->ZZA_EST	 With cEstado
+	Replace	ZZA->ZZA_CODSUP	 With cCodSup
+	Replace	ZZA->ZZA_SUPER	 With cNomSuper
+	Replace	ZZA->ZZA_VEND	 With cVendedor
+	Replace	ZZA->ZZA_NOME	 With cNomeVend
+	Replace	ZZA->ZZA_CODIGO	 With cProduto
+	Replace	ZZA->ZZA_DESCRI	 With cDescric
+	Replace	ZZA->ZZA_COND	 With cCondRel
+	Replace	ZZA->ZZA_DESC	 With cDescCond
+	Replace	ZZA->ZZA_PARC  	 With StrZero(nQTdParc,2)	
+	Replace	ZZA->ZZA_QUANT	 With nQuant
+	Replace	ZZA->ZZA_PRCVEN	 With IIF(cCondRel=="001",nPrcVen+(nPrcVen*2.1)/100,nPrcVen)
+	Replace	ZZA->ZZA_VFRETE	 With nFretPrd
+	Replace	ZZA->ZZA_TOTFRT	 With nTotFrt
+	Replace	ZZA->ZZA_VALOR	 With nPrcTot
+	Replace	ZZA->ZZA_TRIB	 With nImposto 
+	Replace	ZZA->ZZA_NUMPAR	 With cNumParc 	                   
+	Replace	ZZA->ZZA_VALORG	 With nValOrig	
+	Replace	ZZA->ZZA_VENORI	 With dVencOrig	 	
+	Replace	ZZA->ZZA_VLSALD	 With nValOrig-nValBx	 	
+	Replace	ZZA->ZZA_VLBAIXA With nValBx	 	
+	Replace	ZZA->ZZA_DTBAIX	 With dtbaixa	    
+	Replace	ZZA->ZZA_BXPROP	 With nBxPorc
+	Replace	ZZA->ZZA_BASE	 With nBaseComiss
+	Replace	ZZA->ZZA_PERCO	 With nPercent
+	Replace	ZZA->ZZA_COMISS  With nValComiss
+	Replace	ZZA->ZZA_PERENC  With nEncarg
+	Replace	ZZA->ZZA_VALENC  With nValBx * (nEncarg/100)
+	Replace	ZZA->ZZA_SEQ	 With nSeq   
+	Replace	ZZA->ZZA_PREFIX  With cPrefix  //C 3  
+	
+MsUnlock()
+
+Return
+
+
+/* 
+CFOPs que serão levadas em consideração na rotina de comissão.
+5101-VENTA DE PRODUCCION DEL ESTABLECIMIENTO                
+5102-VENTAS DE MERC. ADQUIRIDAS Y/O RECIBIDAS DE TERCEROS   
+5105-VENDA DE PRODUCAO  QUE NAO DEVA POR ELE TRANSITAR      
+5106-VENDA DE MERC. RECEB. TERC. QUE NAO DEVA POR ELE TRANS.
+6101-VENDA DE PRODUCAO DO ESTABELECIMENTO                   
+6102-VENDA DE MERCADORIA ADQUIRIDA OU RECEBIDA DE TERCE
+6105-VENDA DE PRODUCAO DO ESTAB. QUE NAO DEVA POR ELE TRANS.
+6106-VENDA MERC. RECEB. TERC. QUE NAO DEVA POR ELE TRANSITAR
+6107-VENDA PRODUCAO ESTABELECIMENTO DEST. A NAO CONTRIBUINTE
+6108-VENDA MERC. RECEB.TERC. DESTINADA A NAO CONTRIBUINTE   
+6111-VENDA PRODUCAO DO ESTAB. REMET.ANT.EM CONSIG.INDUST.   
+6551-VENDA DE BEM DO ATIVO IMOBILIZADO                      
+5551-VENDA DE BEM DO ATIVO IMOBILIZADO                      
+5949-OUTRA SAIDA DE MERC. OU PREST. SERV. NAO ESPECIFICADO   --Não usar
+6553-DEVOLUCAO DE COMPRA DE BEM PARA O ATIVO IMOBILIZADO    --Não usar
+
+
+Usar para venda futura.
+5922-LANC. EFET. SIMPLES FATURAMENTO DECOR.VENDA ENT. FUTURA.
+6922-LANCAMENTO EFET. SIMPLES FAT. DECOR. VENDA ENTR. FUTURA.
+*/
+
+
+

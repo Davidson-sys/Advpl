@@ -1,0 +1,49 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "totvs_language_debug",
+			"request": "launch",
+			"name": "LAB",
+			"program": "${command:AskForProgramName}",
+			"smartclientBin": "D:\\NUTRATTA\\PROTHEUS\\smartclient_Lab\\smartclient.exe",
+			"isMultiSession": true,
+			"enableTableSync": true
+		},
+		{
+			"type": "totvs_language_debug",
+			"request": "launch",
+			"name": "12.15",
+			"program": "${command:AskForProgramName}",
+			"cwb": "${workspaceFolder}",
+			"smartclientBin": "D:\\NUTRATTA\\PROTHEUS\\smartclient_12_25\\smartclient.exe",
+			"isMultiSession": true,
+			"enableTableSync": true
+		}
+	],
+	"lastPrograms": [
+		{
+			"args": [],
+			"label": "ACOM001",
+			"description": ""
+		},
+		{
+			"args": [
+				"()"
+			],
+			"label": "U_ACOM001",
+			"description": "()"
+		},
+		{
+			"args": [],
+			"label": "SIGAMDI",
+			"description": ""
+		},
+		{
+			"args": [],
+			"label": "SIGAFIN",
+			"description": ""
+		}
+	],
+	"lastProgramExecuted": "SIGAFIN"
+}

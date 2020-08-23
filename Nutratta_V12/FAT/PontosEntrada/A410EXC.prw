@@ -1,0 +1,45 @@
+#INCLUDE "PROTHEUS.CH"
+#INCLUDE "RWMAKE.CH"
+#INCLUDE "TOPCONN.CH"
+
+//--------------------------------------------------------------------------
+/* {Protheus.doc} A410EXC
+
+Ponto de entrada para não permitir excluir pedidos de venda
+com contrato de parceria.
+
+Empresa - Copyright - Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 13/09/2016
+@version P11 R8   
+
+@return Logico (.T. ou .F.)
+*/
+//--------------------------------------------------------------------------
+User Function A410EXC()
+ 
+Local aAreaPRd	:= GetArea()
+Local cTabela		:= M->C5_TABELA
+Local cCodCli		:= M->C5_CLIENTE
+Local cCodLoj		:= M->C5_LOJACLI
+Local cTipo		:= M->C5_TIPO	 
+
+Local nPosPrd 	:= 	aScan(aHeader,{|x| AllTrim(x[2])=="C6_PRODUTO"})
+Local cCodPrd		:= 	GDFieldGet("C6_PRODUTO",n)
+Local nValFrete	:=	GDFieldGet("C6_C_FRETE",n)	
+Local cTEs			:=	GDFieldGet("C6_TES",n)
+Local cContrat	:=	GDFieldGet("C6_CONTRAT",n) 
+Local lRet			:= .T.
+
+If FUNNAME()=="MATA410"
+
+	If  !Empty(cContrat)
+		
+		Aviso("Nutratta","Não será possivel excluir pedidos de vendas com contrato de parceria !!!"+Chr(13)+Chr(10)+;
+		"contrato: "+cContrat,{"Voltar"},2,)
+		lRet := .F.					
+	EndIf	
+EndIf   
+
+RestArea(aAreaPRd)
+Return(lRet)

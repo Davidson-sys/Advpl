@@ -1,0 +1,40 @@
+#line 1 "C:\NUTRATTA\INCLUDE\PROTHEUS.CH"
+#line 1 "C:\NUTRATTA\INCLUDE\dialog.ch"
+#line 28 "PROTHEUS.CH"
+#line 1 "C:\NUTRATTA\INCLUDE\font.ch"
+#line 29 "PROTHEUS.CH"
+#line 1 "C:\NUTRATTA\INCLUDE\ptmenu.ch"
+#line 31 "PROTHEUS.CH"
+#line 1 "C:\NUTRATTA\INCLUDE\print.ch"
+#line 33 "PROTHEUS.CH"
+#line 1 "C:\NUTRATTA\INCLUDE\colors.ch"
+#line 35 "PROTHEUS.CH"
+#line 1 "C:\NUTRATTA\INCLUDE\folder.ch"
+#line 37 "PROTHEUS.CH"
+#line 1 "C:\NUTRATTA\INCLUDE\msobject.ch"
+#line 38 "PROTHEUS.CH"
+#line 1 "C:\NUTRATTA\INCLUDE\vkey.ch"
+#line 42 "PROTHEUS.CH"
+#line 1 "C:\NUTRATTA\INCLUDE\winapi.ch"
+#line 44 "PROTHEUS.CH"
+#line 1 "C:\NUTRATTA\INCLUDE\fwcommand.ch"
+#line 47 "PROTHEUS.CH"
+#line 1 "C:\NUTRATTA\INCLUDE\fwcss.ch"
+#line 50 "PROTHEUS.CH"
+#line 19 "g:\meu drive\workspace\nutratta_v12\fat\pontosentrada\fa040b01.prw"
+Function U_FA040B01()
+
+Local aArea := GetArea()
+Local lRet  := .T. 
+
+DbSelectArea("SE5")
+SE5->(DbSetOrder(7))
+SE5->(DbSeek(xFilial("SE5")+SE1->E1_PREFIXO+SE1->E1_NUM+SE1->E1_PARCELA+SE1->E1_TIPO+SE1->E1_CLIENTE+SE1->E1_LOJA))
+If SE5->(Found()) .And.  SE5->E5_C_COMPG == "S"
+	lRet := .F. 
+	Iif(FindFunction("APMsgInfo"), APMsgInfo("Não é possível excluir a Baixa pois já foi pago comissão sobre o título. Entrar em contato com a TI.",), MsgInfo("Não é possível excluir a Baixa pois já foi pago comissão sobre o título. Entrar em contato com a TI.",))
+EndIf
+
+DbCloseArea()
+RestArea(aArea)
+Return lRet

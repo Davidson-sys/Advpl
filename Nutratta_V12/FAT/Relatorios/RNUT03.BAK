@@ -1,0 +1,40 @@
+#INCLUDE "RWMAKE.CH"          
+#INCLUDE "PROTHEUS.CH"
+#INCLUDE "MSOBJECT.CH"
+#INCLUDE "topconn.ch"      
+#INCLUDE "COLORS.CH"
+#INCLUDE "TBICONN.CH"
+
+Static __aUserLg := {}
+
+//--------------------------------------------------------------------------
+/* {Protheus.doc} RNUT03
+Relatório de provisao de comissão Nutratta.
+
+Empresa - Copyright -Nutratta Nutrição Animal.
+@author Davidson Clayton
+@since 09/05/2017
+@version P11 R8
+*/
+//--------------------------------------------------------------------------  
+User Function RNUT03()
+
+Local oReport
+
+Private nRegTmp   := 0
+Private cArqTrab  := ""
+Private cIndTrb1  := Space(08)
+Private cArqTSA3  := ""
+Private cIndTSA3  := Space(08)
+Private cArqTSM0  := ""
+Private cIndTSM0  := Space(08)
+Private aColunas  := {}
+
+//-- Interface de impressao
+oReport := ReportDef()
+oReport:PrintDialog() 
+
+
+
+Return
+      

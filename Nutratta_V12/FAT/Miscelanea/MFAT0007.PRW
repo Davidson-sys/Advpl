@@ -1,0 +1,51 @@
+#INCLUDE "TOTVS.CH"   
+#INCLUDE "PROTHEUS.CH"
+#INCLUDE "DBTREE.CH"
+
+//-------------------------------------------------------------------
+/*/{Protheus.doc} MFAT0007.
+Validação de tabela de preço apos seleção no cadastro de vendedores.
+@Author   Davidson-Nutratta
+@Since 	   15/01/2019.
+@Version 	P11 R5
+@param   	n/t
+@return  	n/t
+@obs.......  
+o	Especifico Nutratta Nutrição Animal.
+
+xxx......
+/*/
+//-----------------------------------------------------------------------------------------------------------
+User Function MFAT0007(_cTipVend,_cTabela)   
+
+Local _lExist	:=.F.
+
+//-----------------------------------------------------------------------------------
+// Posiciona na tabela de chamada para verificar se existe o tipo informado.
+//-----------------------------------------------------------------------------------
+dbSelectArea(_cTabela)
+dbSetOrder(1)
+If dbSeek(Padr(xFilial(_cTabela),4)+Padr(_cTipVend,1))
+	
+	_lExist	:=	.T.   
+Else
+	
+	Aviso("Atenção","Tipo de vendedor não encontrado!!! "+chr(13)+chr(10)+"Tabela: "+_cTabela+"  - Favor Verificar.",{"Voltar"},2) 
+	_lExist	:= .F.  
+EndIf
+                         
+Return(_lExist)
+
+
+
+
+
+
+
+
+
+
+
+
+
+

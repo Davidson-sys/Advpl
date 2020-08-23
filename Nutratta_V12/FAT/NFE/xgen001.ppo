@@ -1,0 +1,114 @@
+#line 1 "C:\NUTRATTA\INCLUDE\Rwmake.ch"
+#line 1 "C:\NUTRATTA\INCLUDE\stdwin.ch"
+#line 14 "Rwmake.ch"
+#line 2 "g:\meu drive\workspace\nutratta_v12\fat\nfe\xgen001.prw"
+#line 1 "C:\NUTRATTA\INCLUDE\Colors.ch"
+#line 3 "g:\meu drive\workspace\nutratta_v12\fat\nfe\xgen001.prw"
+#line 1 "C:\NUTRATTA\INCLUDE\Topconn.ch"
+#line 4 "g:\meu drive\workspace\nutratta_v12\fat\nfe\xgen001.prw"
+#line 1 "C:\NUTRATTA\INCLUDE\Protheus.ch"
+#line 1 "C:\NUTRATTA\INCLUDE\dialog.ch"
+#line 28 "Protheus.ch"
+#line 1 "C:\NUTRATTA\INCLUDE\font.ch"
+#line 29 "Protheus.ch"
+#line 1 "C:\NUTRATTA\INCLUDE\ptmenu.ch"
+#line 31 "Protheus.ch"
+#line 1 "C:\NUTRATTA\INCLUDE\print.ch"
+#line 33 "Protheus.ch"
+#line 1 "C:\NUTRATTA\INCLUDE\colors.ch"
+#line 35 "Protheus.ch"
+#line 1 "C:\NUTRATTA\INCLUDE\folder.ch"
+#line 37 "Protheus.ch"
+#line 1 "C:\NUTRATTA\INCLUDE\msobject.ch"
+#line 38 "Protheus.ch"
+#line 1 "C:\NUTRATTA\INCLUDE\vkey.ch"
+#line 42 "Protheus.ch"
+#line 1 "C:\NUTRATTA\INCLUDE\winapi.ch"
+#line 44 "Protheus.ch"
+#line 1 "C:\NUTRATTA\INCLUDE\fwcommand.ch"
+#line 47 "Protheus.ch"
+#line 1 "C:\NUTRATTA\INCLUDE\fwcss.ch"
+#line 50 "Protheus.ch"
+#line 5 "g:\meu drive\workspace\nutratta_v12\fat\nfe\xgen001.prw"
+
+
+
+
+
+
+
+
+
+Function U_XGEN001()
+
+Local cTitulo 	:= "Serviço Transmissor de NFe"
+Local cMens		:= "Confirma a Reinicialização do serviço de transmissão de Nota Fiscal Eletrônica?"
+Local cRet		:= ""
+Local nCnt		:= 0
+
+If Aviso(cTitulo,cMens,{"Confirmar","Abandonar"},2) == 1
+
+
+	aInfo := GetUserInfoArray()
+
+
+	For nI := 1 to Len(aInfo)
+
+		If Substr(aInfo[nI][11],at("Obj",aInfo[nI][11])+5,7) $ ("SPEDNFE/FISA022")
+
+           cRet += IIf(Len(cRet) > 1,",","") + Alltrim(Substr(aInfo[nI][11],at("Logged",aInfo[nI][11])+8,24))
+
+           nCnt++
+
+		EndIf
+
+	next
+
+
+	If Len(cRet) > 1
+
+		cMens := IIf(nCnt > 1,"Os usuários "+Upper(cRet)+" estão ","O usuário "+Upper(cRet)+" está ")
+		cMens += "utilizando o serviço de transmissão de Nota Fiscal Eletrônica, portanto, o mesmo não poderá ser reiniciado!"
+
+		Aviso("Não Permitido!",cMens,{"Ok"},2)
+
+	Else
+		Processa({||fReinicia(),OemToAnsi("Aguarde...")},OemToAnsi("Reiniciando o Serviço..."))
+
+	EndIf
+
+EndIf
+
+Return
+
+
+Static Function fReinicia()
+
+
+
+ProcRegua(2)
+
+IncProc("Encerrando o serviço")
+
+
+
+If 	WaitRunSrv( 'net stop "_TOTVS | NUT | TSS"' , .T.  , "E:\NUT_P11OFC\totvssped\bin\appserver\")
+	WaitRunSrv( 'net stop "_TOTVS | NUT | TSS"' , .T.  , "E:\NUT_P11OFC\totvssped\bin\appserver\")
+
+	IncProc("Iniciando o serviço TSS")
+
+
+
+	If WaitRunSrv( 'net start "_TOTVS | NUT | TSS"'  , .T.  ,"E:\NUT_P11OFC\totvssped\bin\appserver\")
+	   WaitRunSrv( 'net start "_TOTVS | NUT | TSS"'  , .T.  ,"E:\NUT_P11OFC\totvssped\bin\appserver\")
+
+		Iif(FindFunction("APMsgInfo"), APMsgInfo("Serviço reiniciado com sucesso!!",), MsgInfo("Serviço reiniciado com sucesso!!",))
+
+	Else
+		Iif(FindFunction("APMsgStop"), APMsgStop("O serviço não pode ser iniciado!!",), MsgStop("O serviço não pode ser iniciado!!",))
+	EndIf
+Else
+	Iif(FindFunction("APMsgStop"), APMsgStop("O serviço não pode ser encerrado!!",), MsgStop("O serviço não pode ser encerrado!!",))
+EndIf
+
+Return

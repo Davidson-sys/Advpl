@@ -1,0 +1,29 @@
+#INCLUDE "PROTHEUS.CH"
+
+/*
+========================================================================================================================
+Rotina----: CMA150AMNU
+Autor-----: Davidson Clayton
+Data------: 07/06/2018
+========================================================================================================================
+Descrição-: Permite incluir novos itens no menu "Ações Relacionadas".
+Uso-------:  
+========================================================================================================================
+*/
+User Function CMA150AMNU()
+      
+Local aRotAdic:={}	//PARAMIXB[1]
+
+//If IsInCallStack("FATA320")
+		aPermissoes := FT060Permi(__cUserId, "ACA_ACPROD")
+//Else
+		aPermissoes := {.T.,.T.,.T.,.T.}
+//EndIf 
+
+//If 
+	aAdd( aRotAdic, {"Armaz.Bloq/Desbloq","U_MPCP001()", 0, 4, 0, Nil } ) 
+//EndIf
+Return (aRotAdic)
+
+
+

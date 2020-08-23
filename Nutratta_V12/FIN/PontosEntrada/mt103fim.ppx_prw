@@ -1,0 +1,294 @@
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\PROTHEUS.CH"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\Dialog.ch"
+#line 27 "PROTHEUS.CH"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\Font.ch"
+#line 28 "PROTHEUS.CH"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\PTMenu.ch"
+#line 30 "PROTHEUS.CH"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\Print.ch"
+#line 32 "PROTHEUS.CH"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\Colors.ch"
+#line 34 "PROTHEUS.CH"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\Folder.ch"
+#line 36 "PROTHEUS.CH"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\msobject.ch"
+#line 37 "PROTHEUS.CH"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\VKey.ch"
+#line 41 "PROTHEUS.CH"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\WinApi.ch"
+#line 43 "PROTHEUS.CH"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\FWCommand.ch"
+#line 46 "PROTHEUS.CH"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\FWCSS.CH"
+#line 48 "PROTHEUS.CH"
+#line 2 "c:\users\david\GOOGLE~1\GOOGLE~1\WORKSP~1\NUTRAT~1\sigafin\PONTOS~1\mt103fim.prw"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\FWMVCDEF.CH"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\PARMTYPE.CH"
+#line 2 "FWMVCDEF.CH"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\FWMBROWSE.CH"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\FWBROWSE.CH"
+#line 3 "FWMBROWSE.CH"
+#line 4 "FWMVCDEF.CH"
+#line 3 "c:\users\david\GOOGLE~1\GOOGLE~1\WORKSP~1\NUTRAT~1\sigafin\PONTOS~1\mt103fim.prw"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\RWMAKE.CH"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\stdwin.ch"
+#line 14 "RWMAKE.CH"
+#line 4 "c:\users\david\GOOGLE~1\GOOGLE~1\WORKSP~1\NUTRAT~1\sigafin\PONTOS~1\mt103fim.prw"
+#line 1 "C:\USERS\DAVID\DOCUME~1\NUTRATTA\INCLUDE\TOPCONN.CH"
+#line 40 "c:\users\david\GOOGLE~1\GOOGLE~1\WORKSP~1\NUTRAT~1\sigafin\PONTOS~1\mt103fim.prw"
+Function U_MT103FIM()
+Local nOpcao 	:= PARAMIXB[1]
+Local nConfirma := PARAMIXB[2]
+Local oGroup1
+Local oHist
+Local cHist 	:= Space(80)
+Local oSay1
+Local oSButton1
+Local lCompLiber:= .F. 
+Static oDlg
+
+
+GravaNaturez()
+
+IF nOpcao = 3 .AND.  nConfirma = 1
+  oDlg = MsDialog():New( 000, 000, 200, 415, "Nutratta - Ração de alta qualidade",,,.F.,, 0, 16777215,,,.T.,, ,.F. )
+
+     oGroup1 := TGroup():New( 004, 005, 095, 201, " Nutratta ", oDlg, 0, 16777215,.T., )
+     oSay1 := TSay():New( 016, 014,{||  "Favor digitar o histórico da nota. Esta informação será gravada no Histórico do Titulo do Contas a Pagar"},oDlg,,,.F.,.F.,.F.,.T., 0, 16777215, 182, 018,.F.,.F.,.F.,.F.,.F.,.F. )
+     oHist := TGet():New( 038, 014, { | u | If( PCount() == 0, cHist, cHist := u ) },oDlg, 178, 010, "@!",, 0, 16777215,,.F.,,.T.,,.F.,,.F.,.F.,,.F.,.F. ,,"cHist",,,, )
+     oSButton1 := SButton():New( 076, 165,01,{||  IIF(Alltrim(cHist)<>"",GravaHist(cHist),MsgStop("Favor informar o histório!"))}, oDlg,.T.,,)
+
+  oDlg:Activate( oDlg:bLClicked, oDlg:bMoved, oDlg:bPainted,.T.,,,, oDlg:bRClicked, )
+
+EndIF
+
+
+IF( nOpcao = 3 .AND.  nConfirma = 1 )
+
+	aAreaSE2:=	SE2->(GetArea())
+
+	DBSELECTAREA("SE2")
+	DbSetOrder(1)
+	DbSeek(SF1->(F1_FILIAL+F1_PREFIXO+F1_DOC))
+	WHILE !EOF() .AND.  SF1->(F1_FILIAL+F1_PREFIXO+F1_DOC) == SE2->(E2_FILIAL+E2_PREFIXO+E2_NUM)
+
+		cQuery:=	"SELECT R_E_C_N_O_ REC FROM "+RETSQLNAME("SE2")+" SE2 "
+		cQuery+=	"WHERE D_E_L_E_T_ = ' ' AND "
+		cQuery+=	"E2_FORNECE='"+SF1->F1_FORNECE+"' AND "
+		cQuery+=	"E2_LOJA='"+SF1->F1_LOJA+"' And "
+		cQuery+=	"E2_SALDO > 0 And "
+		cQuery+=	"E2_TIPO IN "+FORMATIN(GETNEWPAR("NT_TPDBFOR","PA /NDF"),"/")+" "
+
+		dbUseArea( .T. , "TOPCONN", TCGenQry(, , cQuery), "LIBTMP", .F. , .T. )
+
+		If !LIBTMP->(EOF())
+
+			If Type("lCompLiber") == "U"
+				If MsgYesNo("Este cliente contem titulo(s) do Tipo NCC e/ou RA em aberto, deseja compensa-lo(s) neste momento?")
+					lCompLiber:= .T. 
+
+					SetKey (123,{|a,b| AcessaPerg("AFI340", .T. )})
+					Pergunte("AFI340", .T. )
+
+				Else
+					lCompLiber:= .F. 
+				EndIf
+			EndIf
+
+		EndIf
+
+		If lCompLiber
+
+			DbSelectArea("SE2")
+
+			PRIVATE	lFina340 := ExistBlock("FA340FILT")
+
+
+
+
+			PRIVATE cCadastro := OemToAnsi("Compensa‡„o de Titulos")
+
+
+
+
+			PRIVATE cLote
+			LoteCont( "FIN" )
+
+			PRIVATE	VALOR 	:= 0
+			PRIVATE VALOR4	:= 0
+			PRIVATE VLRINSTR := 0
+			PRIVATE	cMarca	:= GetMark()
+			PRIVATE	lFina340 := ExistBlock("FA340FILT")
+			PRIVATE	cCpoNum
+
+			PRIVATE nTamTit := TamSX3("E2_PREFIXO")[1]+TamSX3("E2_NUM")[1]+TamSX3("E2_PARCELA")[1]
+			PRIVATE nTamTip := TamSX3("E2_TIPO")[1]
+			Private aTxMoedas	:=	{}
+
+			Private lCalcIssBx := !Empty( SE5->( FieldPos( "E5_VRETISS" ) ) ) .and.  !Empty( SE2->( FieldPos( "E2_SEQBX"   ) ) ) .and.  !Empty( SE2->( FieldPos( "E2_TRETISS" ) ) ) .and.  GetNewPar("MV_MRETISS","1") == "2"
+
+			Private aTxMoedas	:=	{}
+
+
+
+
+
+
+
+			Aadd(aTxMoedas,{"",1,PesqPict("SM2","M2_MOEDA1"),1})
+			For nA := 2	To MoedFin()
+				cMoedaTx :=	Str(nA,IIf(nA <= 9,1,2))
+				If !Empty(GetMv("MV_MOEDA"+cMoedaTx))
+					nVlMoeda := RecMoeda(dDataBase,nA)
+					Aadd(aTxMoedas,{GetMv("MV_MOEDA"+cMoedaTx),nVlMoeda,PesqPict("SM2","M2_MOEDA"+cMoedaTx),nVlMoeda })
+				Else
+					Exit
+				Endif
+			Next
+
+			Fa340Comp("SE2",,4)
+
+		EndIf
+		DbSelectArea("LIBTMP")
+		DbCloseArea()
+
+		DbSelectArea("SE2")
+		DbSkip()
+	END
+
+
+
+	nOpct	:=	0
+	DBSELECTAREA("SE2")
+	DbSetOrder(1)
+	DbSeek(SF1->(F1_FILIAL+F1_PREFIXO+F1_DOC))
+	IF FOUND()
+		cFiltro:=	"E2_NATUREZ = '"+SE2->E2_NATUREZ+"' .AND. E2_SALDO > 0 .AND. E2_TIPO $ '"+GetNewPar("NT_TPPROV","PR /")+"' "
+
+		DbSelectArea("SE2")
+		if ( Empty((cFiltro)) );    dbClearFilter(); else;    dbSetFilter({|| &(cFiltro)},(cFiltro) ); end
+		DbSelectArea("SE2")
+		dbgotop()
+		If !Eof()
+
+			lInverte:= .F. 
+			cMarca	:=	GetMark()
+
+			oDlg1 = MsDialog():New( 9, 0, 28, 160, "Selecao para Delecao de PROVISIONAMENTOS",,,.F.,,,,, oMainWnd,.F.,, ,.F. )
+
+			oMark := MsSelect():New("SE2","E2_OK",,,@lInverte,@cMarca,{1,1,110,633})
+			oDlg1:Activate( oDlg1:bLClicked, oDlg1:bMoved, oDlg1:bPainted,.T.,,,{|Self|EnchoiceBar(oDlg1,{||nOpct:=1,oDlg1:End()},{||nOpct:=2,oDlg1:End()})}, oDlg1:bRClicked, )
+
+		EndIf
+
+		If nOpct == 1
+			DbSelectArea("SE2")
+			DbGoTop()
+			While !Eof()
+
+				If SE2->E2_OK == cMarca
+					RecLock("SE2", .f. )
+					DbDelete()
+					MsUnLock()
+				EndIf
+
+				DbSelectArea("SE2")
+				DbSkip()
+			End
+		EndIf
+
+		DbSelectArea("SE2")
+		dbClearFilter()
+
+	EndIf
+
+	RestArea(aAreaSE2)
+	lCompLiber:=Nil
+
+
+	If nConfirma == 1
+		U_ACOM001()
+	Endif
+ENDIF
+
+Return()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Static Function Gravahist(cGrava)
+Local xAreaSE2:=GetArea("SE2")
+Local cQuery
+
+dbSelectArea("SE2")
+
+cQuery:= "SELECT R_E_C_N_O_ AS REC FROM "+RetSqlName("SE2")+" WHERE E2_PREFIXO = '"+SE2->E2_PREFIXO+"' AND E2_NUM = '"+SE2->E2_NUM+"' AND E2_TIPO= '"+SE2->E2_TIPO+"' "
+cQuery+=" AND E2_FORNECE = '"+SE2->E2_FORNECE+"' AND E2_LOJA= '"+SE2->E2_LOJA+"' AND D_E_L_E_T_ = ''"
+cQuery+=" ORDER BY E2_PARCELA"
+dbUseArea(.T., "TOPCONN", TCGENQRY(,,ChangeQuery(cQuery)), "TMP" , .F. , .T. )
+
+While !TMP->(EOF())
+
+	SE2->(DbGoto(TMP->REC))
+	RecLock("SE2", .F. )
+		SE2->E2_HIST	:=cGrava
+	MsUnLock()
+	TMP->(dbSkip())
+EndDo
+
+TMP->(dbCloseArea())
+RestArea(xAreaSE2)
+oDlg:End()
+Return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Static Function GravaNaturez()
+Local xAreaSE2:=GetArea("SE2")
+Local cQuery
+
+dbSelectArea("SE2")
+
+cQuery:= "SELECT R_E_C_N_O_ AS REC FROM "+RetSqlName("SE2")+" WHERE E2_PREFIXO = '"+SE2->E2_PREFIXO+"' AND E2_NUM = '"+SE2->E2_NUM+"' AND E2_TIPO= '"+SE2->E2_TIPO+"' "
+cQuery+=" AND E2_FORNECE = '"+SE2->E2_FORNECE+"' AND E2_LOJA= '"+SE2->E2_LOJA+"' AND D_E_L_E_T_ = ''"
+cQuery+=" ORDER BY E2_PARCELA"
+dbUseArea(.T., "TOPCONN", TCGENQRY(,,ChangeQuery(cQuery)), "TMP" , .F. , .T. )
+
+While !TMP->(EOF())
+
+	SE2->(DbGoto(TMP->REC))
+	RecLock("SE2", .F. )
+		SE2->E2_E_NATUR	:= POSICIONE("SED", 1, xFilial("SED")+SE2->E2_NATUREZ, "ED_DESCRIC" )
+	MsUnLock()
+	TMP->(dbSkip())
+EndDo
+
+TMP->(dbCloseArea())
+RestArea(xAreaSE2)
+Return
