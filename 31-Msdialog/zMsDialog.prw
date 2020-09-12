@@ -49,7 +49,7 @@ User Function zMsDialog()
     aSize[7] = 7 -> Linha inicial dialog (janela).
     */
 
-    Define MsDialog oDialog TITLE 'Titulo' STYLE DS_MODALFRAME From aSize[7],0 To aSize[6],aSize[5] OF oMainWnd PIXEL
+    Define MsDialog oDialog TITLE 'Atualização' STYLE DS_MODALFRAME From aSize[7],0 To aSize[6],aSize[5] OF oMainWnd PIXEL
     //Se não utilizar o MsAdvSize, pode-se utilizar a propriedade lMaximized igual a T para maximizar a janela
     //oDialog:lMaximized := .T. //Maximiza a janela
     //Usando o estilo STYLE DS_MODALFRAME, remove o botão X
@@ -70,5 +70,5 @@ Return
 
 //Resultado: em  99/99/9999 Nome Sobrenome  ---> Teste com a rotina - 100% Funcionando
 
-//Teste git hub 17:37
+//Teste git hub 17:42
 
