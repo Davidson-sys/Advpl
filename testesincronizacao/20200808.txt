@@ -1,5 +1,0 @@
-Local funcionando de forma sincronizada.
-caso tenha necessidade 
-conta Davidson-sys
-teste de pull 
-teste de push
