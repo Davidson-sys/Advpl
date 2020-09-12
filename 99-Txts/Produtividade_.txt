@@ -467,6 +467,7 @@ Local
 	
 	Subir os dados	
 		Remote Local
+		  Param  Externo/interno
 		git push Local master	
 	
 Nutratta
