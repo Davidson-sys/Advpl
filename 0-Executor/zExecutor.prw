@@ -87,7 +87,7 @@ Static Function fExecuta()
         EndIf
     EndIf
 
-    RestArea(aArea)
+    RestArea(aArea)  
 Return
 
 //Resultado: em 25/08/2020 Davidson --> Teste com a rotina - 100% Funcionando.
