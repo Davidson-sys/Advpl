@@ -23,3 +23,5 @@ FirstYDate( dDate ) -> dFirstYDate -> Retorna a Data do Primeiro dia do Ano da D
 LastYDate( dDate ) -> dLastYDate -> Retorna a Data do ùltimo dia do Ano da Data Passada
 DiaSemana( dData , nTam , nDia ) -> Retorna a Descrição do Dia da Semana conforme parâmetros
 MesExtenso( nMes ) -> Retorna o mes em extenso
+
+Teste de igore
