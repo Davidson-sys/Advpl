@@ -14,7 +14,7 @@
 //-------------------------------------------------------------------
 /*/{Protheus.doc} MFAT0009.
 Rotina para apuração das comissoes geradas após baixas dos titulos.
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	   28/11/2019.
 @Version 	12.1.17
 @param   	n/t
@@ -43,7 +43,7 @@ Return
 //-------------------------------------------------------------------
 /*/{Protheus.doc} fCreatScreen.
 Função de criação da tela de gerenciamento de comissões.
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	   28/11/2019.
 @Version 	12.1.17
 @param   	n/t
@@ -146,7 +146,7 @@ aAdd(aObjects, {100, 100, .T., .T.})
 aInfo   := {aSize[1], aSize[2], aSize[3], aSize[4], 5, 5}
 aPosObj := MsObjSize(aInfo, aObjects)                                                                                                              
 
-DEFINE MSDIALOG oDlgEsp TITLE OemToAnsi('Gerenciamento de Comissões Nutratta') FROM  aSize[7],0 To aSize[6],aSize[5] PIXEL 
+DEFINE MSDIALOG oDlgEsp TITLE OemToAnsi('Gerenciamento de Comissões') FROM  aSize[7],0 To aSize[6],aSize[5] PIXEL 
  
 //-----------------------------------------------------------------------------------
 // Group para separa Período.
@@ -233,7 +233,7 @@ Return
 //-------------------------------------------------------------------
 /*/{Protheus.doc} fStructure.
 Rotina para atualizar as notas fiscais emitidas com o calculo 
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	   03/12/2019.
 @Version 	12.1.17
 @param   	n/t
@@ -289,7 +289,7 @@ Return
 //-------------------------------------------------------------------
 /*/{Protheus.doc} fCalcComiss.
 Rotina para realizar o recalculo de comissão.
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	  02/12/2019.
 @Version 	12.1.17
 @param   	n/t
@@ -359,7 +359,7 @@ Return
 //-------------------------------------------------------------------
 /*/{Protheus.doc} MFATDADOS.
 Rotina para carregar os dados.
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	   03/12/2019.
 @Version 	12.1.17
 @param   	n/t
@@ -428,7 +428,7 @@ Return lRet
 //-------------------------------------------------------------------
 /*/{Protheus.doc} fBsucaDados.
 Função para buscar os dados na tabela de comissionamento.
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	   03/12/2019.
 @Version 	12.1.17
 @param   	n/t
@@ -555,7 +555,7 @@ Return(_aDados)
 //-------------------------------------------------------------------
 /*/{Protheus.doc} ZZAPesq.
 Tela para realização das pesquisas.
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	   03/12/2019
 @Version 	12.1.17
 @param   	n/t
@@ -572,7 +572,7 @@ Return Nil
 //-------------------------------------------------------------------
 /*/{Protheus.doc} _ZZAPesq.
 Tela para realizar as pesquisas.
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	   03/12/2019.
 @Version 	12.1.17
 @param   	n/t
@@ -649,7 +649,7 @@ Return Nil
 //-------------------------------------------------------------------
 /*/{Protheus.doc} DLCLIK.
 Rotina para marcar e desmarcar os itens no acols.
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	   06/12/2019.
 @Version 	12.1.17
 @param   	n/t
@@ -694,7 +694,7 @@ Return
 //-------------------------------------------------------------------
 /*/{Protheus.doc} TDLCLIK.
 Marca e desmarca todos 
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	   06/12/2019.
 @Version 	12.1.17
 @param   	n/t
@@ -747,7 +747,7 @@ Return
 //-------------------------------------------------------------------
 /*/Protheus.doc} FechaPer.
  Encerrar período apos recalculo de comissão.
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	   17/12/2019
 @Version 	12.1.17
 @param   	n/t
@@ -773,7 +773,7 @@ If !lContinua
 	Return 
 EndIf
 
-Define MSDialog _oDlgVen From 000,000 To 60,360 Title OemToAnsi("Informe o valor total baixado pelo Financiero Nutratta") Pixel
+Define MSDialog _oDlgVen From 000,000 To 60,360 Title OemToAnsi("Informe o valor total baixado pelo Financiero ") Pixel
 
 @010,002 Say " Total Baixado:" Size 120,08 Pixel Of _oDlgVen
 @010,080 MSGet _nVlrTotBx Size 060,08 Pixel Of _oDlgVen PICTURE "@E 999,999,999.99"  VALID _nVlrTotBx > 0 When .T.
@@ -808,7 +808,7 @@ Return
 //-------------------------------------------------------------------
 /*/{Protheus.doc} VLDPER
  Encerrar período apos recalculo de comissão.
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	   17/12/2019
 @Version 	12.1.17
 @param   	n/t
@@ -887,7 +887,7 @@ Return(lRet)
 //-------------------------------------------------------------------
 /*/{Protheus.doc} ZB5PER
 Consulta períodos.
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	   17/12/2019
 @Version 	12.1.17
 @param   	n/t
@@ -927,7 +927,7 @@ Return
 //-------------------------------------------------------------------
 /*/{Protheus.doc} fCloseArea.
 Tela para conferencia do calculo de descontos.
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	   03/12/2019
 @Version 	12.1.17
 @param   	n/t

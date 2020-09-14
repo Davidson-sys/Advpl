@@ -7,13 +7,13 @@
 //-------------------------------------------------------------------
 /*/{Protheus.doc} MFAT0010.
 Rotina para realizar a manutenção dos períodos de comissonamento.
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	   29/11/2019
 @Version 	12.1.17
 @param   	n/t
 @return  	n/t
 @obs.......  
-o Especifico Nutratta Nutrição Animal.
+o Especifico .
 
 /*/
 //-----------------------------------------------------------------------------------------------------------
@@ -24,7 +24,7 @@ User Function MFAT0010()
 //MBROWSE DA TABELA ZZJ - CADASTRO DE LOCAIS DE ENTREGA
 //-----------------------------------------------------------------------------------
 Private cPerg   := ""
-Private cCadastro := "Cadastro períodos de comissão Nutratta"
+Private cCadastro := "Cadastro períodos de comissão "
 Private aRotina := { {"Pesquisar","AxPesqui",0,1} ,;
              {"Visualizar","AxVisual",0,2} ,;
              {"Incluir","AxInclui",0,3} ,;
@@ -52,7 +52,7 @@ Return
 //-------------------------------------------------------------------
 /*/{Protheus.doc} ZB5VldCpo
 Rotina para validar os campos dos periodos de comissão
-@Author   Davidson-Nutratta
+@Author   Davidson
 @Since 	   29/11/2019.
 @Version 	12.1.17
 @param   	n/t
