@@ -25,18 +25,20 @@ Link TDN:
 https://tdn.totvs.com/pages/viewpage.action?pageId=24346988
 /*/
 //--------------------------------------------------------------------
+
 User Function zMsDialog()
 
     Local aSize     := {}
-    Local bOk       := {|| }
-    Local bCancel   := {|| oDialog:End() }
-    Local aItens    :=  {'Normal','Regularização','Ambos'}
-    Local oFtTxt    := TFont():New('Tahoma',,018,,.T.,,,,,.F.,.F.)
-    Local aSaveArea :=  GetArea()
+    Local bOk       :={|| }
+    Local bCancel   :={|| oDialog:End() }
+    Local aItens1   :={'Normal', 'Regularização', 'Ambos'}
+    Local oFtTxt    := TFont():New('Tahoma', , 018, , .T., , , , , .F., .F.)
+    Local aSaveArea := GetArea()
     Local oDialog
     Local cItens
 
     aSize           := MsAdvSize(.F.)
+
 
     /*
     MsAdvSize (http://tdn.totvs.com/display/public/mp/MsAdvSize+-+Dimensionamento+de+Janelas) 
@@ -57,7 +59,7 @@ User Function zMsDialog()
 
     //Lin e Col
     @ 050,005 SAY 'Pedidos :' FONT oFtTxt PIXEL OF oDialog
-    @ 050,045 COMBOBOX cItens ITEMS aItens SIZE 052,008 PIXEL OF oDialog
+    @ 050,045 COMBOBOX cItens ITEMS aItens1 SIZE 052,008 PIXEL OF oDialog
     @ 049,102 BUTTON 'Filtrar' SIZE 060,012 ACTION oDlg:End() OF oDialog PIXEL
 
     ACTIVATE MSDIALOG oDialog ON INIT EnchoiceBar(oDialog, bOk , bCancel) CENTERED
@@ -67,10 +69,4 @@ User Function zMsDialog()
 Return
 
 //  u_zMsDialog() 		//Chamar no executor.
-
-//Resultado: em  99/99/9999 Nome Sobrenome  ---> Teste com a rotina - 100% Funcionando
-
-//Teste com o Git Lens 16:09
-
-
 
