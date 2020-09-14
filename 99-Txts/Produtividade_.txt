@@ -461,9 +461,13 @@ GITHUB 					GITHUB
 Sincronizar arquivos no GitHub
 
 Local 
-	Branch fontes Local
+	Branch fontes Local   
 	cd D:/Desenvolvimento/GIITHUB/
 	Repositorio remoto     https://github.com/Davidson-sys/Advpl.git        (Davidson)
+	
+	
+	14/09/2020 troquei a Branch para Local e montei o remote como LocaWeb
+		git push LocaWeb Local 
 	
 	Subir os dados	
 		Remote Local
