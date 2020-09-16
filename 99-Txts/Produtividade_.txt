@@ -75,7 +75,7 @@ Aadd(aDados,{dDtSepult,cHrSepult,cEndInuma})
 +Chr(13)+Chr(10)+Chr(13)+Chr(10)
 &(U_GETXT())
 
-nPosServ	  	:=aScan(aHeader,{|x| AllTrim(x[2]) == 'G2_TPSERV'})
+nPosServ:=aScan(aHeader,{|x| AllTrim(x[2]) == 'G2_TPSERV'})
 nPos:= aScan(aCols,{|x|AllTrim(x[GdFieldPos("ZI_OE1")]) == Alltrim(M->ZI_OE1)})
 
 
@@ -187,8 +187,6 @@ chr(10)-Espaço.
 
 
 _cMens+= OemToAnsi("O armazem informado para o item "+aCols[i][nPosItem]+" - "+"não é o armazem padrão do produto...")
-
-
 Aviso("Atenção",_cMens,{"Voltar"},2)
 
 
@@ -411,11 +409,7 @@ Periodo : 12:00 a 12:15
 Manutenção
 Davidson
 
-Procedimento para encerrar mdfe forçadamente 
-DTX_PRFMDF=''
-DTX_STFMDF =1
-DTX_IDFMDF =''
-DTX_CODEVE=0
+
 
 Local  aAreaAnt := GetArea()
 RestArea(aAreaAnt)
@@ -463,6 +457,9 @@ Sincronizar arquivos no GitHub
 Local 
 	Branch fontes Local   
 	cd D:/Desenvolvimento/GIITHUB/
+	
+	cd d:/
+	cd Desenvolvimento/ADVPL-Extreme\ Programming\ XP/
 	Repositorio remoto     https://github.com/Davidson-sys/Advpl.git        (Davidson)
 	
 	

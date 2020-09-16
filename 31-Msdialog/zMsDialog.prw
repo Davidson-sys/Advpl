@@ -28,16 +28,16 @@ https://tdn.totvs.com/pages/viewpage.action?pageId=24346988
 
 User Function zMsDialog()
 
-    Local aSize     := {}
-    Local bOk       :={|| }
-    Local bCancel   :={|| oDialog:End() }
-    Local aItens1   :={'Normal', 'Regularização', 'Ambos'}
-    Local oFtTxt    := TFont():New('Tahoma', , 018, , .T., , , , , .F., .F.)
-    Local aSaveArea := GetArea()
-    Local oDialog
-    Local cItens
+  Local aSize     := {}
+  Local bOk       :={|| }
+  Local bCancel   :={|| oDialog:End() }
+  Local aItens1   :={'Normal', 'Regularização', 'Ambos'}
+  Local oFtTxt    := TFont():New('Tahoma', , 018, , .T., , , , , .F., .F.)
+  Local aSaveArea := GetArea()
+  Local oDialog
+  Local cItens
 
-    aSize           := MsAdvSize(.F.)
+  aSize           := MsAdvSize(.F.)
 
 
     /*
@@ -51,22 +51,23 @@ User Function zMsDialog()
     aSize[7] = 7 -> Linha inicial dialog (janela).
     */
 
-    Define MsDialog oDialog TITLE 'Atualização' STYLE DS_MODALFRAME From aSize[7],0 To aSize[6],aSize[5] OF oMainWnd PIXEL
-    //Se não utilizar o MsAdvSize, pode-se utilizar a propriedade lMaximized igual a T para maximizar a janela
-    //oDialog:lMaximized := .T. //Maximiza a janela
-    //Usando o estilo STYLE DS_MODALFRAME, remove o botão X
+  Define MsDialog oDialog TITLE 'Atualização' STYLE DS_MODALFRAME From aSize[7],0 To aSize[6],aSize[5] OF oMainWnd PIXEL
+  //Se não utilizar o MsAdvSize, pode-se utilizar a propriedade lMaximized igual a T para maximizar a janela
+  //oDialog:lMaximized := .T. //Maximiza a janela
+  //Usando o estilo STYLE DS_MODALFRAME, remove o botão X
 
 
-    //Lin e Col
-    @ 050,005 SAY 'Pedidos :' FONT oFtTxt PIXEL OF oDialog
-    @ 050,045 COMBOBOX cItens ITEMS aItens1 SIZE 052,008 PIXEL OF oDialog
-    @ 049,102 BUTTON 'Filtrar' SIZE 060,012 ACTION oDlg:End() OF oDialog PIXEL
+  //Lin e Col
+  @ 050,005 SAY 'Pedidos :' FONT oFtTxt PIXEL OF oDialog
+  @ 050,045 COMBOBOX cItens ITEMS aItens1 SIZE 052,008 PIXEL OF oDialog
+  @ 049,102 BUTTON 'Filtrar' SIZE 060,012 ACTION oDlg:End() OF oDialog PIXEL
 
-    ACTIVATE MSDIALOG oDialog ON INIT EnchoiceBar(oDialog, bOk , bCancel) CENTERED
+  ACTIVATE MSDIALOG oDialog ON INIT EnchoiceBar(oDialog, bOk , bCancel) CENTERED
 
-    RestArea(aSaveArea)
+  RestArea(aSaveArea)
 
 Return
 
 //  u_zMsDialog() 		//Chamar no executor.
 
+//Resultado: em  99/99/9999 Nome Sobrenome  ---> Teste com a rotina - 0% Funcionando.
