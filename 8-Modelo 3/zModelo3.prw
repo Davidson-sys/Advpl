@@ -130,3 +130,4 @@ User Function zModelo3()
 Return
 
 //IF(!INCLUI,Posicione("DHB",1,xFilial("DHB")+SC5->C5_CODMOT,"DHB_NOMMOT"),"") 
+//Resultado: em 31/08/2020 Davidson  ---> Teste com a rotina - 0% Erro inicializador padrão.

@@ -86,6 +86,7 @@ User Function Inclui(cAlias, nReg, nOpc)
 Return Nil
 
 /*
+u_MBrwSA1()
 Resultado: em 25/08/2020 Davidson
 Teste com a rotina - 100% Funcionando.
 */

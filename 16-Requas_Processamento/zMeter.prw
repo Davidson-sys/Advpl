@@ -48,5 +48,5 @@ Return
 
 //  u_zMeter() 		//Chamar no executor.
 
-//Resultado: em  99/99/9999 Nome Sobrenome  ---> Teste com a rotina - 0% Funcionando.
+//Resultado: em  99/99/9999 Nome Sobrenome  ---> Teste com a rotina - 0% Erro.
 

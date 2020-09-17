@@ -16,6 +16,7 @@ Função para criação da legenda
 o	Especifico nome da empresa/cliente.
 
 A BrwLegenda() é uma funcionalidade que permite a inclusão de legendas na MBrowse().
+
 u_zBrwLegenda()
 
 xxx......
@@ -174,6 +175,6 @@ User Function zBrLegenda()
 
 Return Nil
 
-
+//u_zBrwLegenda()
 //Resultado: em 25/08/2020 Davidson --> Teste com a rotina - 100% Funcionando.
 
