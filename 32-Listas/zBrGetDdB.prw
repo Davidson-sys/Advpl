@@ -16,7 +16,7 @@ Cria um objeto do tipo grade com registros em linhas e informações em colunas.
 @obs.......
 Especifico nome da empresa/cliente.
 
-zNomeFunction() 		//Chamar no executor.
+u_zbrGetDDB() 		//Chamar no executor.
 
 Link TDN:
 https://tdn.totvs.com/display/tec/BrGetDDb
@@ -36,21 +36,21 @@ User Function zbrGetDDB()
     oBrowse:bCustomEditCol := {|x,y,z| u_editLine(x,y,z) }
     oBrowse:bDelete := { || conOut( "bDelete" ) }
 
-    oBrowse:addColumn( TCColumn():new( 'Codigo', { || SA1->A1_COD  },,,, 'LEFT',, .F., .F.,,,, .F. ) )
+    oBrowse:addColumn( TCColumn():new( 'Codigo', { || SA1->A1_COD  },,,,'LEFT',, .F., .F.,,,, .F. ) )
     oBrowse:addColumn( TCColumn():new( 'Loja', { || SA1->A1_LOJA },,,, 'LEFT',, .F., .F.,,,, .F. ) )
     oBrowse:addColumn( TCColumn():new( 'Nome', { || SA1->A1_NOME },,,, 'LEFT',, .F., .F.,,,, .F. ) )
 
     ACTIVATE DIALOG oDlg CENTERED
 
     RestArea(aSaveArea)
-return nil
+Return nil
 
 //-----------------------------------------------------------------------------------
 // Função para validar a edição da linha do grid
 //-----------------------------------------------------------------------------------
 User Function editLine(x,y,z)
 
-    ApMsgStop("editLine")
+    ApMsgStop("editLine,não será possivel alterar!!!")
     RestArea(aSaveArea)
 Return .T.
 
@@ -60,4 +60,4 @@ Return .T.
 
 
 
- 
+
