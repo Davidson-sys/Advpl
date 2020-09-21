@@ -35,4 +35,4 @@ Return("XProgramming")
 
 //  u_ ESPnome() 		//Chamar no executor.
 
-//Resultado: em  99/99/9999 Nome Sobrenome  ---> Teste com a rotina - 0% Funcionando.
+//Resultado: em  99/99/9999 Nome Sobrenome  ---> Teste com a rotina - 100% Funcionando.
