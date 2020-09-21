@@ -1,0 +1,539 @@
+											Produtividade 
+
+    Mensagens
+
+Aviso("Atenção","Dados não encontrados verifique os parametros.!! Favor Verificar.",{"Voltar"},2)
+lRet	"Solicitação de Compras","Existe avaliação de fornecedor pendente para o centro de custo selecionado." +Chr(13)+Chr(10)+Chr(13)+Chr(10)+",{"Voltar"},2)
+
+
+    Posiciones 
+
+Posicione("SZA",1,xFilial("SZA")+SZE->ZE_NUMPROC,"ZA_NOME")
+
+Utilizando em consulta padrao.
+Posicione("SA1",1,xFilial("SA1")+C5_CLIENTE+C5_LOJACLI,"A1_NOME")
+Posicione("SA2",1,xFilial("SA2")+C7_FORNECE+C7_LOJA,"A2_NOME")
+Posicione("SC6",1,xFilial("SC5")+SC5->C5_NUM,"C6_VALOR")
+
+//CNC_FILIAL+CNC_CLIENT+CNC_LOJACL+CNC_NUMERO   aList2[nOpc,3]+aList2[nOpc,4]   
+Posicione("CNC",1,xFilial("CN9")+CN9->CN9_CLIENT+CN9->CN9->LOJACL+CN9->CN9_NUMERO+CN9->CN9_REVISA,"CNC_NOMECL")
+Posicione("CNC",1,xFilial("CN9")+CN9_CLIENT+CN9->LOJACL+CN9_NUMERO+CN9_REVISA,"CNC_NOMECL")
+
+Regra: 
+Posicione("SX5",1,xFilial("SX5")+"BC"+M->A1_ZREFBCO,"X5_DESCRI") 
+Posicione("SX5",1,xFilial("SX5")+"BC"+M->US_ZREFBCO,"X5_DESCRI") 
+
+Posicione("SX5",1,xFilial("SX5")+"1X"+'M->B1_C_CDFAM',"X5_DESCRI")
+
+IIF(M->B1_GRUPO $ '2000','','00')
+       
+IIF(M->B1_GRUPO $ '2000' .AND. M->B1_C_FAMIL $ '00',.F.,.T.)
+                                                            
+IIF(M->B1_GRUPO $ '1000' .AND. 'NAO PA - OUTRO' $ M->B1_C_FAMIL,.T.,.F.)                                                       
+															
+
+Posicione("SB1",1,xFilial("SC6")+C7_CC,"CTT_DESC01")
+Posicione("CTT",1,xFilial("CTT")+CELL(AM),"CTT_DESC01")
+
+Validações
+
+ExistCpo("SZ2",M->Z3_ORDEM,2)
+ExistCpo("NNR")
+ExistCpo("")
+ U_CheckTime() .And. (Z2_HRFIMDE >=Z2_HRDESCA)
+
+Processa( {|| fProcessa() }, "Aguarde...", "Gerando Relatorio...",.F.)
+ 
+Repetições 
+
+
+Recklocks
+	dbSelectArea("SBE")
+	dbSetOrder(9)
+	lExist:=SZ4->(DbSeek(xFilial("SZ4")+cOperador+oGetD:aCols[nI][GDFieldPos("Z4_CODMAQU",oGetD:aHeader)]+oGetD:aCols[nI][GDFieldPos("Z4_CODSERV",oGetD:aHeader)]))//Z4_CODOPER+Z4_CODMAQU+Z4_CODSERV 
+	If RecLock("SZ4",!lExist)
+	
+	GDFieldPut("DA_LOCAL","03",Len(aCols))
+
+oGetD:aCols[nI][GDFieldPos("Z4_CODMAQU",oGetD:aHeader)]
+oGetD:aCols[nI][GDFieldPos("C1_PRODUTO",oGetD:aHeader)]
+
+
+Outros
+
+CNFISCAL := STRZERO (VAL(CNFISCAL),9),.T.)
+PadL(AllTrim(BM_GRUPO), 6, "0")
+
+
+StrZero(Val(BM_GRUPO),2)
+Elaptime(M->Z2_HRINI,M->Z2_HRFIM)
+
+IIF(Len(Alltrim(Z2_PLACA))<> 7,.F.,.T.)
+
+Aadd(aDados,{dDtSepult,cHrSepult,cEndInuma})
+
++Chr(13)+Chr(10)+Chr(13)+Chr(10)
+&(U_GETXT())
+
+nPosServ:=aScan(aHeader,{|x| AllTrim(x[2]) == 'G2_TPSERV'})
+nPos:= aScan(aCols,{|x|AllTrim(x[GdFieldPos("ZI_OE1")]) == Alltrim(M->ZI_OE1)})
+
+
+If aCols[n][Len(aCols[n])] == .F.  //Valida se a linha não está deletada
+
+
+nPos:= aScan(aCols,{|x| AllTrim(x[GdFieldPos("ZI_OE1")]) == aCols[n,GdFieldPos("ZI_OE1")]})
+
+Local nCol1 := GdFieldPos('B1_COL1', oGetDados:aHeader ) // Esse B1_CODBAR 
+
+
+Posicione("SC5",1,xFilial("SC5")+SC6->C6_NUM,"DTOS(C5_EMISSAO)"
+Posicione("SC5",1,xFilial("SC5")+SC6->C6_NUM,"C5_CLIENTE")   
+
+Posicione("SA4",1,xFilial("SZH")+M->ZH_CODTRAN,"A4_NOME")
+Posicione("SA4",1,xFilial("SA4")+M->ZH_CODTRAN,"A4_NOME")
+
+Posicione("CTT",1,xFilial("CTT")+,"CTT_NOME")        
+
+Posicione("SA1",1,xFilial("SC5")+TMPQRY->C5_NUM+TMPQRY->C5_LOJACLI,"A1_NOME")
+Posicione("SC6",1,xFilial("SC5")+TMPQRY->C5_NUM+TMPQRY->C5_LOJACLI,"C6_PRODUTO")
+Posicione("SC6",1,xFilial("SC5")+TMPQRY->C5_NUM+TMPQRY->C5_LOJACLI,"C6_PRODUTO")
+Posicione("SC6",1,xFilial("SC5")+TMPQRY->C5_NUM+TMPQRY->C5_LOJACLI,"C6_DESCRI")
+Posicione("SC2",1,xFilial("SC2")+M->Z2_OP,"C2_PRODUTO")
+Posicione("SB1",1,xFilial("SB1")+SD2->D2_COD,"B1_DESC")
+
+IIF(!Empty(SA1->A1_VEND),Posicione("SA3",1,"01  "+M->E1_VEND1,"A3_NOME"),"")
+Posicione("SA3",1,xFilial("SA3")+SA1->A1_COD+SA1->A1_LOJA,"A3_NOME")
+
+Posicione("SA3",1,"01  "+M->A1_VEND,"A3_NOME")
+Posicione("SA3",1,"01  "+M->CJ_VEND1,"A3_NOME")
+Posicione("SA3",1,"01  "+M->A1_VEND,"A3_NOME")
+Posicione("SA3",1,"01  "+Posicione("SA3",1,"01  "+CELL(AJ),"A3_SUPER"),"A3_NOME")
+
+Posicione("SE4",1,xFilial("SE4")+M->A1_COND,"E4_DESCRI")
+Posicione("DA0",1,xFilial("DA0")+M->A1_TABELA,"DA0_DESCRI")
+
+Posicione("SF4",1,xFilial("SF4")+ ,"F4_TEXTO")
+
+E1_NONVEND  c 40
+
+
+Posicione("SA3",1,"01  "+SE1->E1_VEND1,"A3_NOME")
+Posicione("SA3",5,"01  "+SE1->E1_VEND1,"A3_SUPER")
+
+
+Posicione("SA3",5,"01  "+Posicione("SA3",5,"01  "+SE1->E1_VEND1,"A3_SUPER"),"A3_NOME")
+
+Posicione("SA3",1,"01  "+Posicione("SA3",1,"01  "+SE1->E1_VEND1,"A3_SUPER"),"A3_NOME")
+
+
+Posicione("SC2",1,xFilial("SH6")+H6_OP,"C2_PESO")
+
+Transform(nValTab,"@E 999,999.99")
+	
+cCodCart := StrTran(StrTran(StrTran(SubStr(AllTrim(cCodCArt),1,19),'.',''),'-',''),"'",'')
+Alltrim(StrTran('.',''))
+
+Posicione - Posiciona tabela em registro ( cAliasnOrdemcSeekcField [ cNickName ] ) --> cReturn
+
+Nome			Tipo				Descrição						   Default			Obrigatório			Referência	
+cAlias			Caracter			Alias da tabela a ser posicionada						X				
+nOrdem			Numérico			Ordem de índice a ser utilizada						    X				
+cSeek			Caracter			Expressão a ser utilizada na busca						X				
+cField			Caracter			Campo da tabela a ser retornado						    X				
+cNickName		Caracter			NickName da ordem de índice a ser posicionado, se informado o parametro nOrdem será desconsiderado.							
+   
+//Posiciona no Cooperado pelo código da CRM
+DbSelectArea("SA1")
+SA1->(DbOrderNickName("ZKEYCRM"))
+If SA1->(DbSeek(xFilial("SA1")+PadR(cCRMCoo,5,"")))
+
+Posicione("SC5",B,xFilial("SC5")+SC6->C6_NUM,,"C5_LOJA",cNickName)
+																																					  
+Posicione("SC5",1,xFilial("SC5")+SC6->C6_NUM,"C5_LOJA")Posicione("SC5",1,xFilial("SC5")+SC6->C6_NUM,"C5_LOJA")
+
+http://tdn.totvs.com/display/public/mp/Posicione+-+Posiciona+tabela+em+registro
+
+Modo de edição
+IIF(INCLUI,.T.,.F.)                                            
+
+$$$$$$$$$$mensagens$$$$$$$$$$$Mensagens$$$$$$$$$$$$$$$$$Mensagens$$$$$$$$$$$$$$$$$$$$$$$$$
+$$$$$$$$$$mensagens$$$$$$$$$$$Mensagens$$$$$$$$$$$$$$$$$Mensagens$$$$$$$$$$$$$$$$$$$$$$$$$
+$$$$$$$$$$mensagens$$$$$$$$$$$Mensagens$$$$$$$$$$$$$$$$$Mensagens$$$$$$$$$$$$$$$$$$$$$$$$$
+$$$$$$$$$$mensagens$$$$$$$$$$$Mensagens$$$$$$$$$$$$$$$$$Mensagens$$$$$$$$$$$$$$$$$$$$$$$$$
+$$$$$$$$$$mensagens$$$$$$$$$$$Mensagens$$$$$$$$$$$$$$$$$Mensagens$$$$$$$$$$$$$$$$$$$$$$$$$
+$$$$$$$$$$mensagens$$$$$$$$$$$Mensagens$$$$$$$$$$$$$$$$$Mensagens$$$$$$$$$$$$$$$$$$$$$$$$$
+
+If MsgYesNo(_cMens,"ATENÇÃO","YESNO")
+
+MsgAlert(" texto.","Atencao!")
+
+MsgBox("Tabela ZZQ criada com Sucesso!!","Mensagem","Info")	
+
+MsgStop(Parada obrigatoria!)
+
+
+Alert("o fatorial de "+cValtochar(nFator)+"é"+cVAtochar(nResultado))
+
+
+Aviso("Atencao","Grupo Invalido !! Favor Verificar.",{"Voltar"},2)
+
+Aviso("Nutratta","Existe um contrato em aberto para este cliente e produto."+Chr(13)+Chr(10)+"Favor verificar o contrato. ",{"Voltar"},2,"Contrato: "+ADB->ADB_NUMCTR)
+lRet := .F.
+
+Aviso("Atenção",OemToAnsi("O produto informado no item "+aCols[i][nPosItem]+" - "+"possui rastreabilidade..."+chr(10)+"Lote e data de validade devem ser preenchidos."),{"Voltar"},2)
+chr(13)-Enter.
+chr(10)-Espaço.
+
+
+_cMens+= OemToAnsi("O armazem informado para o item "+aCols[i][nPosItem]+" - "+"não é o armazem padrão do produto...")
+Aviso("Atenção",_cMens,{"Voltar"},2)
+
+
+MsgYesNo("Deseja continuar com a data diferente da data do sistema?","
+ diferente DataDoSistema")
+
+ 
+nOpc := Aviso("I M P O R T A C A O","Deseja Acertar o Cadastro de Clientes e Fornecedores",{"Sim","Nao"},2)
+
+
+Posicione("SA2",3,xFilial("SA2")+,"A2_N_PIS")        
+Posicione("SB1",1,xFilial("SC6")+M->C6_PRODUTO,"B1_DESC") 
+consulta padrão para tabela gernerica 
+HD->X5_CHAVE='HD' 
+BC->X5_CHAVE='BC'   
+M6->X5_CHAVE='M6' 
+01->X5_CHAVE='01'   
+SX5->X5_CHAVE='02'  
+M6->X5_CHAVE='M6' 
+ZF->X5_CHAVE='ZF'  
+2X->X5_CHAVE='2X'
+02->X5_CHAVE='01'                                                                                                                                                                                                                                         
+1X->X5_CHAVE='1X'
+X5->X5_TABELA='A2'
+  
+$$$$$$  CORRETO $$$$$$$$$$$$  
+VESAO 12 EM 24/01/2018  $$$$
+Coloquei somente 1X     $$$$
+Coloquei XP sem aspas na$$$$ 
+consulta XPOPER         $$$$ 
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+CriaTrabela
+CHKFILE('TABELA')
+CHKFILE('NNR') 
+CHKFILE('ZZP')  
+  
+M->X5_TABELA == '00' .AND. M->X5_CHAVE=='XP'
+
+SX5->X5_TABELA ='XP'
+
+1X SUBSTR(SX5->X5_CHAVE,1,2)== '1X'
+1X SX5->X5_CHAVE == '1X'
+
+XP SX5->X5_CHAVE == 'XP'
+
+Substituir no apsdu.
+"US"+SUBSTR(X3_CAMPO,3,LEN(X3_CAMPO))
+"US"+SUBSTR(X3_CAMPO,3,LEN(X3_CAMPO))
+ALLTRIM(''+SUBSTR(X3_CAMPO,3,LEN(X3_CAMPO)))
+
+"ZZN"+SUBSTR(X3_CAMPO,4,LEN(X3_CAMPO))
+"ZZO"+SUBSTR(X3_CAMPO,4,LEN(X3_CAMPO))
+"ZZP"+SUBSTR(X3_CAMPO,4,LEN(X3_CAMPO))
+"ZZR"+SUBSTR(X3_CAMPO,4,LEN(X3_CAMPO))
+"ZZT"+SUBSTR(X3_CAMPO,4,LEN(X3_CAMPO))
+"ZZU"+SUBSTR(X3_CAMPO,4,LEN(X3_CAMPO))
+"ZZV"+SUBSTR(X3_CAMPO,4,LEN(X3_CAMPO))
+"ZA4"+SUBSTR(X3_CAMPO,4,LEN(X3_CAMPO))
+"ZA5"+SUBSTR(X3_CAMPO,4,LEN(X3_CAMPO))
+"ZA9"+SUBSTR(X3_CAMPO,4,LEN(X3_CAMPO))
+"ZB4"+SUBSTR(X3_CAMPO,4,LEN(X3_CAMPO))
+CT1
+"X"+SUBSTR(CT1_CONTA,1,LEN(CT1_CONTA))
+"X"+SUBSTR(CT1_CTASUP,1,LEN(CT1_CTASUP))
+
+CT2
+"X"+SUBSTR(CT2_DEBITO,1,LEN(CT2_DEBITO))
+"X"+SUBSTR(CT2_CREDIT,1,LEN(CT2_CREDIT))
+
+SUBSTR(CT1_CTASUP,2,LEN(CT1_CTASUP))
+
+SUBSTR(CT1_CONTA,2,LEN(CT1_CONTA))
+
+Substituir no apsdu.
+LEFT(B1_COD,1)
+Alltrim(LEFT(CT1_CONTA,2)=''+CT1_CONTA)  
+
+
+
+C5_INCLUID CAMPO VIRTUAL DE 30 
+USRFULLNAME(SUBSTR(EMBARALHA(SC5->C5_USERLGI,1),3,6))
+USRFULLNAME(SUBSTR(EMBARALHA(SC5->C5_USERLGA,1),3,6))
+
+Posicione("SA3",1,"01  "+SC5->C5_VEND1,"A3_NOME")
+
+Posicione("SED",1,xFilial("SED")+,"ED_DESCRIC")
+E1_INCLUID CAMPO VIRTUAL DE 30 
+USRFULLNAME(SUBSTR(EMBARALHA(SE1->E1_USERLGI,1),3,6))
+E1_ALTERAD CAMPO VIRTUAL DE 30
+USRFULLNAME(SUBSTR(EMBARALHA(SE1->E1_USERLGA,1),3,6))
+
+C7_INCLUID CAMPO VIRTUAL DE 30
+USRFULLNAME(SUBSTR(EMBARALHA(SC7->C7_USERLGI,1),3,6))
+
+C7_ALTERAD CAMPO VIRTUAL DE 30
+USRFULLNAME(SUBSTR(EMBARALHA(SC7->C7_USERLGA,1),3,6))
+
+ED_INCLUID CAMPO VIRTUAL DE 30
+USRFULLNAME(SUBSTR(EMBARALHA(SED->ED_USERLGI,1),3,6))
+
+ED_ALTERAD CAMPO VIRTUAL DE 30
+USRFULLNAME(SUBSTR(EMBARALHA(SED->ED_USERLGA,1),3,6))
+
+
+ZZ1_INCLUI CAMPO VIRTUAL DE 30
+USRFULLNAME(SUBSTR(EMBARALHA(ZZ1->ZZ1_USERGI,1),3,6))
+
+ZZ1_ALTERA CAMPO VIRTUAL DE 30
+USRFULLNAME(SUBSTR(EMBARALHA(ZZ1->ZZ1_USERGA,1),3,6))
+
+
+ADA_INCLUI CAMPO VIRTUAL DE 30
+USRFULLNAME(SUBSTR(EMBARALHA(ADA->ADA_USERGI,1),3,6))
+
+ADA_ALTERA CAMPO VIRTUAL DE 30
+USRFULLNAME(SUBSTR(EMBARALHA(ADA->ADA_USERGA,1),3,6))
+
+
+
+CTT_INCLUI CAMPO VIRTUAL DE 30
+USRFULLNAME(SUBSTR(EMBARALHA(CTT->CTT_USERGI,1),3,6))
+
+CTT_ALTERA CAMPO VIRTUAL DE 30
+USRFULLNAME(SUBSTR(EMBARALHA(CTT->CTT_USERGA,1),3,6))
+
+Posicione("SX5",1,xFilial("SX5")+"ZF"+Alltrim(SC7->C7_N_FORPG),"X5_DESCRI")
+Posicione("SX5",1,xFilial("SX5")+"60"+Alltrim(SC7->C7_N_FORPG),"X5_DESCRI")
+
+E1_LOG   -> campo criado para pegar o log do usuario. 
+
+USRFULLNAME(SC7->C7_USER)
+
+IIF(M->C5_TPFRETE=="C",.T.,.F.)  
+
+IIF(M->CJ_CONDPAG=="001",.T.,.F.)    
+
+//Devolve o conteúdo de um campo da GetDados ou da MsNewGetdados
+GDFieldPos("Z4_CODMAQU",oGetD:aHeader)
+Posicione("SB1",1,xFilial("SB1")+GDFieldGet("C7_PRODUTO",n,.T.,,),"B1_PCOBS") 
+Posicione("SED",1,xFilial("SED")+Alltrim(StrTran(,'.','')),"ED_PAI")
+
+=DATA(DIREITA(K4;2);EXT.TEXTO(K4;5;2);ESQUERDA(K4;2))
+
+;ESQUERDA(K4;2;EXT.TEXTO(K4;5;2);
+
+=DATA(ESQUERDA(K4;2);EXT.TEXTO(K4;5;2);DIREITA(K4;2))
+=DATA(ESQUERDA(K2;4);EXT.TEXTO(K2;5;2);DIREITA(K2;2))
+
+Local cUsuDesc	:= SuperGetMv("NT_USUDESC",.F.,"000000")
+
+//Cabeçaho
+
+#INCLUDE "PROTHEUS.CH"
+#INCLUDE "RWMAKE.CH"
+#INCLUDE "TOPCONN.CH"
+//--------------------------------------------------------------------------
+/* {Protheus.doc} Função
+Descrição da função
+Empresa - Copyright -Nutratta Nutrição Animal.
+@author Nome Sobrenome
+@since 11/01/2018
+@version P11 R8
+*/
+//--------------------------------------------------------------------------
+
+	
+//-----------------------------------------------------------------------------------
+// comentario de bloco.
+//-----------------------------------------------------------------------------------
+
+
+/*
+========================================================================================================================
+Rotina----: MTA416PV
+Autor-----: Marco Aurelio Braga
+Data------: 26/05/2016
+========================================================================================================================
+Descrição-: Executado apos o preenchimento do aCols na Baixa do Orcamento de Vendas
+Uso-------: Usuado pelo cliente para tratar campos customizados do orçamnto para o pedido
+========================================================================================================================
+*/
+
+TSS
+
+NUT_S11OFC
+
+
+// privilegios
+aPermissoes := FT060Permi(__cUserId, "ACA_ACPROD")
+aPermissoes := {.T.,.T.,.T.,.T.}
+
+Daniel portal
+usuário = suporte.portal
+senha = Nutratt@10
+
+Acesso Scopi
+Usuario:marciof 
+Senha:marciof 
+Instituição:senha   
+
+
+scrip atalho
+-P=SIGAMDI -C=EXTERNO -E=NUT_P1225 -M
+-P=SIGAMDI -C=EXTERNO -E=NUT_P1225D -M
+-P=SIGAMDI -C=EXTERNO -E=NUT_P1225H -M
+
+-P=SIGACFG -C=EXTERNO -E=NUT_P1225 -M
+-P=APSDU   -C=EXTERNO -E=NUT_P1225 -M
+
+-P=SIGAMDI -C=EXTERNO -E=NUT_P12LAB -M
+-P=SIGAMDI -C=EXTERNO -E=NUT_P12DEV -M
+-P=SIGACFG -C=EXTERNO -E=NUT_P12LAB -M
+-P=APSDU   -C=EXTERNO -E=NUT_P12LAB -M
+
+Senhores boa tarde
+
+Gentileza sairem do sistema
+Periodo : 12:00 a 12:15
+Manutenção
+Davidson
+
+
+
+Local  aAreaAnt := GetArea()
+RestArea(aAreaAnt)
+
+GETSXENUM(cAlias, ZZ2_CODIGO, "ZZ2",1)
+GETSXENUM("SM4",M4_CODIGO)
+
+UPDDISTR
+http://tdn.totvs.com/pages/releaseview.action?pageId=198935223
+
+deletar serviço
+Sc Delete nome do serviço 
+se tiver espaço "nome do serviço"
+
+
+/*Função FunName()
+FunName()
+Exemplo:
+If FunName() =='MATA460"
+
+/* Função Modulo
+
+IF NMODULO == 43
+	RestArea(_aArea)
+EndIf
+
+
+
+retDaFuncStatic := StaticCall( xParam1, xParam2, xParam3, ..., ..., xParamN)
+
+xParam1 := NomeDoPrograma (sem aspas), onde se encontra a Static Function
+xParam2 := NomeDaStaticFunction (sem aspas), a ser executada
+xParam3 := A partir desse espaço são definidos os parametros que são passados
+para a Static Function que esta sendo invocada.
+
+Verifica se o conteúdo digitado no campo é iniciado com espaço. 
+texto() 
+
+@! Converte todos os caracteres alfabéticos em letras maiúsculas
+@ 010,050 MSGET cCNPJ SIZE 55,11 OF oDlg PIXEL PICTURE “@R 99.999.999/9999-99”;  
+
+GITHUB 					GITHUB  
+Sincronizar arquivos no GitHub
+
+Local 
+	Branch fontes Local   
+	cd D:/Desenvolvimento/GIITHUB/
+	
+	cd d:/
+	cd Desenvolvimento/ADVPL-Extreme\ Programming\ XP/
+	Repositorio remoto     https://github.com/Davidson-sys/Advpl.git        (Davidson)
+	
+	
+	14/09/2020 troquei a Branch para Local e montei o remote como LocaWeb
+		git push LocaWeb Local 
+	
+	Subir os dados	
+		Remote Local
+		  Param  Externo/interno
+		git push Local master	
+	
+	ssh
+	git@github.com:Davidson-sys/Advpl.git
+	
+Nutratta
+	
+	cd c:/
+	cd Users/Davidson/Google\ Drive/Workspace/Nutratta_V12  		(Drve é com espaço mesmo)
+	
+	cd Users\Davidson\Google\ Drive\Workspace\Nutratta_V12 
+	
+	Branch dos fontes Nutratta
+			C:\Users\Davidson\Google Drive\Workspace\Nutratta_V12
+	
+
+	Subir os dados	
+		Remote NuttV12
+		git push NuttV12 master  
+	
+	Se não pedir senha remover as credenciais do Windows onde constam GIT:
+	https://prnt.sc/gyob8b	
+	
+	git remote add origin https://github.com/Nutratta/Nutratta.git     (Nutratta)
+					      https://github.com/tinutratta/nutratta.git
+						  
+	https://github.com/Nutratta/Nutratta antigo 
+	
+	novo
+	https://github.com/tinutratta/nutratta.git
+
+	
+DICAS
+	Dia a dia 
+			Adicionar arquivos/Pastas 
+				git add nome_do_arquivo/nome_da_pasta
+
+			Commintar 
+				git commit -m nome_do_arquivo/nome_da_pasta
+
+			Enviar ao servidor/Site
+				git push origin master
+				
+	Credenciais do Windows		
+		Se não pedir senha remover as credenciais do Windows onde constam GIT:
+		ou exibir a mensagem 
+		remote: Permission to Davidson-sys/Advpl.git denied to Nutratta.
+		fatal: unable to access 'https://github.com/Davidson-sys/Advpl.git/': The requested URL returned error: 403
+			
+		remover as credenciais do Windows ai será solicitado novamete a tela de login
+		https://prnt.sc/gyob8b
+
+
+	Commandos:
+	https://confluence.atlassian.com/bitbucketserver/basic-git-commands-776639767.html
+
+
+Git Hub Ti nutratta 
+
+push 
+	https://github.com/tinutratta/nutratta.git
+	
+	
+Testes
+git pull origin master --allow-unrelated-histories
+git push origin master --force
+
+Comando MYRELESE na tela inicial substitui o Shift+F6
