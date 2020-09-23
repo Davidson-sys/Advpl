@@ -10,6 +10,8 @@ Exemplo de ExecAuto utilizando MVC (inclusão na Z02)
 @version 1.0
     @example
     u_zRotAuto()
+ Link:
+ https://terminaldeinformacao.com/2017/01/23/vd-advpl-024/
 /*/
 User Function zRotAuto()
     

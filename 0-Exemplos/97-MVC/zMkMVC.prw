@@ -10,7 +10,8 @@ MarkBrow em MVC da tabela de Artistas
 @obs Criar a coluna Z02_OK com o tamanho 2 no Configurador e deixar como não usado
 
 u_zMkMVC()
-
+Link:
+https://terminaldeinformacao.com/2016/09/29/vd-advpl-022/
 /*/
 
 User Function zMkMVC()
