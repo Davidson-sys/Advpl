@@ -32,9 +32,9 @@ Método que cria a instância com a classe zPessoa
 /*/
 Method New(cNome, dNascimento) Class zPessoa
 	//Atribuindo valores nos atributos do objeto instanciado
-	::cNome		:= cNome
-	::dNascimento	:= dNascimento
-	::nIdade		:= fCalcIdade(dNascimento)
+	::cNome       := cNome
+	::dNascimento := dNascimento
+	::nIdade      := fCalcIdade(dNascimento)
 Return Self
 
 
